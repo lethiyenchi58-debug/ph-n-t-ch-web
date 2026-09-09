@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin – Tiệm bánh Mitu</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@600;700;800&family=Montserrat:wght@300;400;500;600;700;800&family=Quicksand:wght@600;700&display=swap" rel="stylesheet" />
+  <link rel="icon" type="image/png" href="images/logo.png" />
+
+  <style>
+    /* ── Admin CSS ── */
+    :root {
+      --primary: #d97706; --primary-dark: #b45309; --primary-light: #fef08a;
+      --secondary: #5c3016;
+      --accent: #fef3c7; --bg: #fffcf8; --bg-dark: #fef7ea;
+      --text: #3c2212; --text-light: #7c5339; --white: #ffffff;
+      --border: #fae5cc; --shadow: rgba(92,48,22,.12);
+      --success: #22c55e; --danger: #ef4444; --warning: #f59e0b; --info: #3b82f6;
+      --sidebar-w: 250px;
+      --font-display: 'Comfortaa', 'Quicksand', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-body: 'Montserrat', sans-serif;
+      --radius: 14px; --radius-sm: 8px;
+      --transition: all .3s ease;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: var(--font-body); background: var(--bg); color: var(--text); }
+    a { text-decoration: none; color: inherit; }
+    button { font-family: var(--font-body); cursor: pointer; }
+    img { max-width: 100%; }
+
+    /* ── Login Screen ── */
+    .login-screen {
+      min-height: 100vh;
+      background: linear-gradient(135deg, #241105 0%, #4a210a 50%, #78350f 100%);
+      display: flex; align-items: center; justify-content: center;
+      padding: 20px;
+    }
+    .login-card {
+      background: white; border-radius: 22px;
+      padding: 44px 40px; max-width: 400px; width: 100%;
+      box-shadow: 0 24px 70px rgba(0,0,0,.35);
+      text-align: center;
+    }
+    .login-icon {
+      width: 72px; height: 72px; margin: 0 auto 16px;
+      border-radius: 50%; border: 3px solid #fde68a;
+      box-shadow: 0 6px 18px rgba(217,119,6,.25);
+      overflow: hidden; background: white;
+    }
+    .login-icon img { width: 100%; height: 100%; object-fit: contain; }
+    .login-title { font-family: var(--font-display); font-size: 28px; color: var(--secondary); margin-bottom: 6px; font-weight: 700; }
+    .login-sub { font-size: 13px; color: var(--text-light); margin-bottom: 28px; }
+    .login-form .form-group { text-align: left; margin-bottom: 16px; }
+    .login-form label { display: block; font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+    .login-form input {
+      width: 100%; padding: 12px 16px;
+      border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+      font-size: 14px; font-family: var(--font-body);
+      color: var(--text); background: var(--bg);
+      outline: none; transition: var(--transition);
+    }
+    .login-form input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(217,119,6,.15); background: white; }
+    .login-error { color: var(--danger); font-size: 13px; font-weight: 600; margin-bottom: 12px; display: none; }
+    .login-error.show { display: block; }
+    .btn-login {
+      width: 100%; padding: 14px;
+      background: linear-gradient(135deg, #d97706, #b45309); color: white;
+      border: none; border-radius: 25px;
+      font-size: 15px; font-weight: 700;
+      cursor: pointer; transition: var(--transition);
+      box-shadow: 0 6px 20px rgba(217,119,6,.35);
+      margin-top: 8px;
+    }
+    .btn-login:hover { background: linear-gradient(135deg, #b45309, #92400e); transform: translateY(-2px); }
+    .back-to-site { display: block; margin-top: 20px; font-size: 13px; color: var(--text-light); }
+    .back-to-site:hover { color: var(--primary); }
+
+    /* ── Admin Layout ── */
+    .admin-layout { display: flex; min-height: 100vh; }
+    .admin-layout.hidden { display: none; }
+
+    /* Sidebar */
+    .sidebar {
+      width: var(--sidebar-w); background: #1a0b03;
+      color: white; display: flex; flex-direction: column;
+      position: fixed; top: 0; left: 0; height: 100vh;
+      overflow-y: auto; z-index: 100;
+      transition: transform .3s ease;
+    }
+    .sidebar-logo {
+      padding: 20px;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+      display: flex; align-items: center; gap: 12px;
+    }
+    .sidebar-logo-img {
+      width: 42px; height: 42px; border-radius: 50%;
+      border: 2px solid #f59e0b; background: white; padding: 2px;
+      object-fit: contain; flex-shrink: 0;
+    }
+    .sidebar-logo-text { font-family: var(--font-display); font-size: 18px; color: #fef3c7; font-weight: 700; }
+    .sidebar-logo-sub { font-size: 10.5px; color: rgba(255,255,255,.5); letter-spacing: 1.5px; text-transform: uppercase; margin-top: 2px; }
+
+    .sidebar-nav { padding: 20px 0; flex: 1; }
+    .nav-section-label {
+      font-size: 10px; font-weight: 700; color: rgba(255,255,255,.35);
+      text-transform: uppercase; letter-spacing: 2px;
+      padding: 8px 20px 6px; margin-top: 8px;
+    }
+    .sidebar-link {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 20px; color: rgba(255,255,255,.7);
+      font-size: 14px; font-weight: 500;
+      transition: var(--transition); cursor: pointer;
+      border-left: 3px solid transparent;
+    }
+    .sidebar-link:hover { color: #fef08a; background: rgba(255,255,255,.06); }
+    .sidebar-link.active { color: white; background: rgba(217,119,6,.22); border-left-color: var(--primary); }
+    .sidebar-link .s-icon { font-size: 18px; width: 22px; text-align: center; }
+
+    .sidebar-footer {
+      padding: 16px 20px;
+      border-top: 1px solid rgba(255,255,255,.08);
+    }
+    .btn-logout {
+      width: 100%; padding: 10px;
+      background: rgba(239,68,68,.15); color: #f87171;
+      border: 1px solid rgba(239,68,68,.3); border-radius: 8px;
+      font-size: 13px; font-weight: 600;
+      cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
+      transition: var(--transition);
+    }
+    .btn-logout:hover { background: rgba(239,68,68,.3); }
+
+    /* Main content */
+    .admin-main {
+      margin-left: var(--sidebar-w);
+      flex: 1; display: flex; flex-direction: column; min-height: 100vh;
+    }
+
+    /* Top bar */
+    .admin-topbar {
+      background: white; border-bottom: 1px solid var(--border);
+      padding: 16px 28px; display: flex; align-items: center;
+      justify-content: space-between; position: sticky; top: 0; z-index: 50;
+    }
+    .topbar-title { font-size: 18px; font-weight: 700; color: var(--text); }
+    .topbar-date { font-size: 13px; color: var(--text-light); }
+    .topbar-admin { display: flex; align-items: center; gap: 10px; }
+    .topbar-avatar {
+      width: 36px; height: 36px; border-radius: 50%;
+      background: var(--primary); color: white;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px;
+    }
+    .topbar-name { font-size: 14px; font-weight: 600; }
+    .hamburger-sidebar {
+      display: none; padding: 4px; cursor: pointer;
+      flex-direction: column; gap: 4px;
+    }
+    .hamburger-sidebar span { width: 22px; height: 2px; background: var(--text); border-radius: 2px; }
+
+    /* Panels */
+    .admin-panel { padding: 28px; display: none; }
+    .admin-panel.active { display: block; }
+
+    /* Panel header */
+    .panel-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; flex-wrap: wrap; gap: 12px; }
+    .panel-title { font-size: 22px; font-weight: 700; color: var(--text); }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex; align-items: center; gap: 7px;
+      padding: 10px 20px; border-radius: 20px; font-size: 13px;
+      font-weight: 700; border: none; cursor: pointer;
+      transition: var(--transition); font-family: var(--font-body);
+    }
+    .btn-primary { background: var(--primary); color: white; box-shadow: 0 4px 14px rgba(212,115,106,.3); }
+    .btn-primary:hover { background: var(--primary-dark); transform: translateY(-1px); }
+    .btn-secondary { background: var(--bg-dark); color: var(--text); border: 1.5px solid var(--border); }
+    .btn-secondary:hover { background: var(--accent); }
+    .btn-danger { background: rgba(239,68,68,.1); color: #dc2626; border: 1px solid rgba(239,68,68,.2); }
+    .btn-danger:hover { background: rgba(239,68,68,.2); }
+    .btn-success { background: rgba(34,197,94,.1); color: #16a34a; border: 1px solid rgba(34,197,94,.2); }
+    .btn-success:hover { background: rgba(34,197,94,.2); }
+    .btn-sm { padding: 7px 14px; font-size: 12px; }
+
+    /* Search bar */
+    .search-filter { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+    .search-input {
+      flex: 1; min-width: 200px;
+      padding: 10px 16px; border: 1.5px solid var(--border);
+      border-radius: 20px; font-size: 14px; font-family: var(--font-body);
+      color: var(--text); background: var(--bg); outline: none;
+    }
+    .search-input:focus { border-color: var(--primary); background: white; }
+    .search-select {
+      padding: 10px 16px; border: 1.5px solid var(--border);
+      border-radius: 20px; font-size: 13px; font-family: var(--font-body);
+      color: var(--text); background: var(--bg); outline: none;
+      cursor: pointer;
+    }
+
+    /* Inventory grid */
+    .inventory-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 18px;
+    }
+    .inv-card {
+      background: white; border-radius: var(--radius);
+      border: 1px solid var(--border);
+      overflow: hidden; transition: var(--transition);
+    }
+    .inv-card:hover { box-shadow: 0 8px 24px var(--shadow); }
+    .inv-card-img {
+      width: 100%; height: 150px;
+      background: var(--accent);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 55px; overflow: hidden;
+      position: relative;
+    }
+    .inv-card-img img { width: 100%; height: 100%; object-fit: cover; position: absolute; inset: 0; }
+    .inv-card-body { padding: 12px 14px 14px; }
+    .inv-card-name { font-weight: 700; font-size: 14px; color: var(--text); margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .inv-card-price { font-size: 15px; font-weight: 800; color: var(--primary); margin-bottom: 4px; }
+    .inv-card-cat { font-size: 11px; background: var(--accent); color: var(--primary); padding: 2px 8px; border-radius: 10px; display: inline-block; font-weight: 600; }
+    .inv-card-actions { display: flex; gap: 6px; margin-top: 12px; }
+    .inv-card-actions button { flex: 1; }
+
+    /* Today panel */
+    .today-info-bar {
+      background: var(--accent); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 14px 18px;
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 20px; flex-wrap: wrap; gap: 12px;
+    }
+    .today-date-text { font-weight: 700; font-size: 14px; color: var(--text); }
+    .today-count-badge {
+      background: var(--primary); color: white;
+      padding: 4px 12px; border-radius: 15px;
+      font-size: 12px; font-weight: 700;
+    }
+    .today-select-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 14px;
+    }
+    .today-select-card {
+      background: white; border: 2px solid var(--border);
+      border-radius: var(--radius-sm); padding: 14px;
+      cursor: pointer; transition: var(--transition);
+      user-select: none;
+    }
+    .today-select-card.selected {
+      border-color: var(--primary);
+      background: rgba(212,115,106,.06);
+    }
+    .today-select-card:hover { border-color: var(--primary-light); }
+    .today-card-img {
+      width: 100%; height: 120px;
+      background: var(--accent); border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 44px; margin-bottom: 10px;
+      overflow: hidden; position: relative;
+    }
+    .today-card-img img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    .today-card-check {
+      position: absolute; top: 6px; right: 6px;
+      width: 24px; height: 24px; border-radius: 50%;
+      background: var(--primary); color: white;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; opacity: 0; transition: var(--transition);
+    }
+    .today-select-card.selected .today-card-check { opacity: 1; }
+    .today-card-name { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .today-card-price { font-size: 13px; font-weight: 800; color: var(--primary); }
+
+    /* Settings */
+    .settings-card {
+      background: white; border-radius: var(--radius);
+      border: 1px solid var(--border);
+      padding: 24px 28px; margin-bottom: 20px;
+    }
+    .settings-card h3 { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 18px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+    .settings-form .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .settings-form .form-group { margin-bottom: 16px; }
+    .settings-form label { display: block; font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+    .settings-form input,
+    .settings-form textarea {
+      width: 100%; padding: 11px 14px;
+      border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+      font-size: 14px; font-family: var(--font-body);
+      color: var(--text); background: var(--bg); outline: none; transition: var(--transition);
+    }
+    .settings-form input:focus,
+    .settings-form textarea:focus { border-color: var(--primary); background: white; box-shadow: 0 0 0 3px rgba(212,115,106,.1); }
+    .settings-form textarea { min-height: 80px; resize: vertical; }
+    .form-hint { font-size: 12px; color: var(--text-light); margin-top: 4px; }
+
+    /* Modal */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,.5);
+      z-index: 2000; display: flex; align-items: center; justify-content: center;
+      padding: 20px; opacity: 0; pointer-events: none; transition: opacity .3s ease;
+    }
+    .modal-overlay.show { opacity: 1; pointer-events: all; }
+    .a-modal {
+      background: white; border-radius: 18px;
+      padding: 30px; max-width: 520px; width: 100%;
+      position: relative; max-height: 90vh; overflow-y: auto;
+      transform: translateY(16px) scale(.97); transition: var(--transition);
+    }
+    .modal-overlay.show .a-modal { transform: translateY(0) scale(1); }
+    .a-modal-title { font-size: 20px; font-weight: 700; color: var(--text); margin-bottom: 20px; padding-bottom: 14px; border-bottom: 1px solid var(--border); }
+    .modal-close-btn {
+      position: absolute; top: 12px; right: 12px;
+      width: 32px; height: 32px; border-radius: 50%;
+      border: none; background: var(--bg); cursor: pointer;
+      font-size: 20px; display: flex; align-items: center; justify-content: center;
+      color: var(--text-light); transition: var(--transition);
+    }
+    .modal-close-btn:hover { background: var(--primary); color: white; }
+
+    /* Image upload */
+    .img-upload-area {
+      border: 2px dashed var(--border); border-radius: var(--radius-sm);
+      padding: 24px; text-align: center; cursor: pointer;
+      transition: var(--transition); background: var(--bg);
+      position: relative; overflow: hidden;
+    }
+    .img-upload-area:hover, .img-upload-area.drag-over { border-color: var(--primary); background: var(--accent); }
+    .img-upload-area input[type=file] { display: none; }
+    .img-upload-preview { display: none; }
+    .img-upload-preview.show { display: block; }
+    .img-preview-img { width: 100%; height: 180px; object-fit: cover; border-radius: 8px; margin-top: 10px; }
+    .img-upload-icon { font-size: 40px; margin-bottom: 10px; }
+    .img-upload-text { font-size: 14px; color: var(--text-light); }
+    .img-upload-text strong { color: var(--primary); }
+
+    /* Toast */
+    .toast {
+      position: fixed; top: 20px; right: 20px; z-index: 9999;
+      background: white; border-radius: 12px; padding: 14px 18px;
+      box-shadow: 0 10px 40px rgba(0,0,0,.14);
+      display: flex; align-items: center; gap: 10px;
+      font-size: 14px; font-weight: 600;
+      border-left: 4px solid var(--primary);
+      transform: translateX(130%); transition: transform .35s cubic-bezier(.22,.68,0,1.2);
+      max-width: 320px;
+    }
+    .toast.show { transform: translateX(0); }
+    .toast.success { border-left-color: var(--success); }
+    .toast.error   { border-left-color: var(--danger); }
+    .toast.info    { border-left-color: var(--info); }
+
+    /* Confirm dialog */
+    .confirm-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 3000; display: flex; align-items: center; justify-content: center; padding: 20px; }
+    .confirm-box { background: white; border-radius: 16px; padding: 28px; max-width: 380px; width: 100%; text-align: center; box-shadow: 0 16px 50px rgba(0,0,0,.2); }
+    .confirm-icon { font-size: 48px; margin-bottom: 14px; }
+    .confirm-title { font-size: 18px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+    .confirm-msg { font-size: 14px; color: var(--text-light); margin-bottom: 24px; line-height: 1.6; }
+    .confirm-btns { display: flex; gap: 12px; }
+    .confirm-btns button { flex: 1; padding: 12px; border-radius: 20px; font-size: 14px; font-weight: 700; border: none; cursor: pointer; font-family: var(--font-body); transition: var(--transition); }
+    .confirm-cancel { background: var(--bg-dark); color: var(--text); border: 1.5px solid var(--border) !important; }
+    .confirm-cancel:hover { background: var(--accent); }
+    .confirm-ok { background: var(--danger); color: white; }
+    .confirm-ok:hover { background: #dc2626; }
+
+    /* Empty state */
+    .empty-state { text-align: center; padding: 60px 20px; color: var(--text-light); }
+    .empty-state .empty-icon { font-size: 64px; margin-bottom: 16px; }
+    .empty-state h3 { font-size: 20px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .sidebar { transform: translateX(-100%); }
+      .sidebar.open { transform: translateX(0); }
+      .admin-main { margin-left: 0; }
+      .hamburger-sidebar { display: flex; }
+      .settings-form .form-row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ==================== LOGIN SCREEN ==================== -->
+<div class="login-screen" id="loginScreen">
+  <div class="login-card">
+    <div class="login-icon"><img src="images/logo.png" alt="Tiệm bánh Mitu" /></div>
+    <h1 class="login-title">Đăng nhập</h1>
+    <p class="login-sub">Trang quản trị – Tiệm bánh Mitu</p>
+
+    <form class="login-form" id="loginForm" novalidate>
+      <div class="form-group">
+        <label for="loginUser">Tên đăng nhập</label>
+        <input type="text" id="loginUser" placeholder="admin" autocomplete="username" />
+      </div>
+      <div class="form-group">
+        <label for="loginPass">Mật khẩu</label>
+        <input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password" />
+      </div>
+      <div class="login-error" id="loginError">❌ Tên đăng nhập hoặc mật khẩu sai!</div>
+      <button type="submit" class="btn-login">🔑 Đăng nhập</button>
+    </form>
+    <a href="index.html" class="back-to-site">← Về trang khách hàng</a>
+  </div>
+</div>
+
+<!-- ==================== ADMIN LAYOUT ==================== -->
+<div class="admin-layout hidden" id="adminLayout">
+
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <img src="images/logo.png" alt="Tiệm bánh Mitu" class="sidebar-logo-img" />
+      <div>
+        <div class="sidebar-logo-text">Mitu Admin</div>
+        <div class="sidebar-logo-sub">Quản trị tiệm bánh</div>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Quản lý</div>
+      <div class="sidebar-link active" data-panel="inventory">
+        <span class="s-icon">📦</span> Kho bánh
+      </div>
+      <div class="sidebar-link" data-panel="today">
+        <span class="s-icon">🌞</span> Menu hôm nay
+      </div>
+
+      <div class="nav-section-label">Hệ thống</div>
+      <div class="sidebar-link" data-panel="settings">
+        <span class="s-icon">⚙️</span> Cài đặt
+      </div>
+      <a href="index.html" class="sidebar-link" target="_blank">
+        <span class="s-icon">🔗</span> Xem trang web
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <button class="btn-logout" id="logoutBtn">🚪 Đăng xuất</button>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <div class="admin-main">
+    <!-- Top bar -->
+    <div class="admin-topbar">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div class="hamburger-sidebar" id="sidebarToggle">
+          <span></span><span></span><span></span>
+        </div>
+        <span class="topbar-title" id="topbarTitle">Kho bánh</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:16px">
+        <span class="topbar-date" id="topbarDate"></span>
+        <div class="topbar-admin">
+          <div class="topbar-avatar">👤</div>
+          <span class="topbar-name" id="topbarName">Admin</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── PANEL: Kho Bánh ── -->
+    <div class="admin-panel active" id="panel-inventory">
+      <div class="panel-header">
+        <h2 class="panel-title">📦 Kho bánh</h2>
+        <button class="btn btn-primary" id="addCakeBtn">+ Thêm bánh mới</button>
+      </div>
+
+      <div class="search-filter">
+        <input type="search" class="search-input" id="invSearch" placeholder="🔍 Tìm theo tên bánh..." />
+        <select class="search-select" id="invCatFilter">
+          <option value="all">Tất cả danh mục</option>
+          <option value="birthday">Bánh sinh nhật</option>
+          <option value="mini">Bánh Mini</option>
+          <option value="fruit">Bánh Hoa quả</option>
+          <option value="square">Bánh Vuông</option>
+          <option value="male">Bánh cho Nam</option>
+          <option value="female">Bánh cho Nữ</option>
+          <option value="boy">Bánh cho Bé Trai</option>
+          <option value="girl">Bánh cho Bé Gái</option>
+          <option value="troll">Bánh Troll &amp; Vui nhộn</option>
+        </select>
+      </div>
+
+      <div class="inventory-grid" id="inventoryGrid">
+        <!-- rendered by admin.js -->
+      </div>
+    </div>
+
+    <!-- ── PANEL: Menu Hôm Nay ── -->
+    <div class="admin-panel" id="panel-today">
+      <div class="panel-header">
+        <h2 class="panel-title">🌞 Menu hôm nay</h2>
+        <div style="display:flex;gap:10px">
+          <button class="btn btn-secondary" id="deselectAllBtn">Bỏ chọn tất cả</button>
+          <button class="btn btn-primary" id="saveTodayBtn">💾 Lưu menu hôm nay</button>
+        </div>
+      </div>
+
+      <div class="today-info-bar">
+        <span>📅</span>
+        <span class="today-date-text" id="todayPanelDate"></span>
+        <span class="today-count-badge" id="todayCount">0 bánh đã chọn</span>
+        <span style="font-size:13px;color:var(--text-light)">Tick chọn những bánh tiệm có sẵn hôm nay</span>
+      </div>
+
+      <div class="today-select-grid" id="todaySelectGrid">
+        <!-- rendered by admin.js -->
+      </div>
+    </div>
+
+    <!-- ── PANEL: Cài đặt ── -->
+    <div class="admin-panel" id="panel-settings">
+      <div class="panel-header">
+        <h2 class="panel-title">⚙️ Cài đặt</h2>
+      </div>
+
+      <!-- Shop info -->
+      <div class="settings-card">
+        <h3>🏪 Thông tin tiệm</h3>
+        <form class="settings-form" id="shopInfoForm">
+          <div class="form-row">
+            <div class="form-group">
+              <label>Tên tiệm</label>
+              <input type="text" id="s-shopName" placeholder="Tiệm bánh Mitu" />
+            </div>
+            <div class="form-group">
+              <label>Số điện thoại</label>
+              <input type="tel" id="s-shopPhone" placeholder="0936290932" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Số Zalo nhận đơn ⭐</label>
+            <input type="tel" id="s-zaloPhone" placeholder="0936290932" />
+            <div class="form-hint">Đây là số Zalo sẽ nhận tất cả đơn đặt bánh từ khách hàng.</div>
+          </div>
+          <div class="form-group">
+            <label>Slogan</label>
+            <input type="text" id="s-shopSlogan" placeholder="Bánh ngọt handmade – Tình yêu trong từng chiếc bánh" />
+          </div>
+          <div class="form-group">
+            <label>Địa chỉ tiệm</label>
+            <input type="text" id="s-shopAddress" placeholder="173 Vạn Phúc - Hà Đông, Hà Nội, Việt Nam" />
+          </div>
+          <div class="form-group">
+            <label>Link Facebook (nếu có)</label>
+            <input type="url" id="s-facebookUrl" placeholder="https://facebook.com/tiembanhMitu" />
+          </div>
+          <button type="submit" class="btn btn-primary">💾 Lưu thông tin tiệm</button>
+        </form>
+      </div>
+
+      <!-- Change password -->
+      <div class="settings-card">
+        <h3>🔒 Đổi mật khẩu đăng nhập</h3>
+        <form class="settings-form" id="changePassForm">
+          <div class="form-group">
+            <label>Mật khẩu hiện tại</label>
+            <input type="password" id="s-curPass" placeholder="••••••••" />
+          </div>
+          <div class="form-group">
+            <label>Mật khẩu mới</label>
+            <input type="password" id="s-newPass" placeholder="••••••••" />
+          </div>
+          <div class="form-group">
+            <label>Xác nhận mật khẩu mới</label>
+            <input type="password" id="s-confirmPass" placeholder="••••••••" />
+          </div>
+          <button type="submit" class="btn btn-primary">🔒 Đổi mật khẩu</button>
+        </form>
+      </div>
+
+      <!-- Danger zone -->
+      <div class="settings-card" style="border-color:rgba(239,68,68,.3)">
+        <h3 style="color:#dc2626">⚠️ Vùng nguy hiểm</h3>
+        <p style="font-size:13px;color:var(--text-light);margin-bottom:14px">Các hành động bên dưới không thể hoàn tác.</p>
+        <button class="btn btn-danger" id="clearTodayBtn">🗑️ Xóa menu hôm nay</button>
+        &nbsp;
+        <button class="btn btn-danger" id="clearAllCakesBtn">🗑️ Xóa toàn bộ kho bánh</button>
+      </div>
+    </div>
+  </div><!-- /admin-main -->
+</div><!-- /admin-layout -->
+
+<!-- ==================== ADD/EDIT CAKE MODAL ==================== -->
+<div class="modal-overlay" id="cakeModal" role="dialog" aria-modal="true">
+  <div class="a-modal">
+    <button class="modal-close-btn" id="cakeModalClose">×</button>
+    <h2 class="a-modal-title" id="cakeModalTitle">Thêm bánh mới</h2>
+
+    <form id="cakeForm" novalidate>
+      <input type="hidden" id="cakeId" />
+
+      <!-- Image upload -->
+      <div class="form-group" style="margin-bottom:18px">
+        <label style="display:block;font-size:13px;font-weight:700;color:var(--text);margin-bottom:8px">Hình ảnh bánh</label>
+        <div class="img-upload-area" id="imgUploadArea">
+          <input type="file" id="imgFileInput" accept="image/*" />
+          <div id="imgUploadDefault">
+            <div class="img-upload-icon">📷</div>
+            <div class="img-upload-text">Nhấn hoặc kéo thả ảnh vào đây<br><strong>JPG, PNG, WebP</strong> – tối đa 5MB</div>
+          </div>
+          <div class="img-upload-preview" id="imgUploadPreview">
+            <img class="img-preview-img" id="imgPreviewEl" src="" alt="preview" />
+            <button type="button" class="btn btn-sm btn-secondary" id="removeImgBtn" style="margin-top:10px">✕ Xóa ảnh</button>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div class="form-group">
+          <label style="display:block;font-size:13px;font-weight:700;color:var(--text);margin-bottom:6px">Tên bánh *</label>
+          <input type="text" id="cakeName" placeholder="VD: Bánh sinh nhật Hàn Quốc" required
+            style="width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:var(--font-body);color:var(--text);background:var(--bg);outline:none;transition:all .3s" />
+        </div>
+        <div class="form-group">
+          <label style="display:block;font-size:13px;font-weight:700;color:var(--text);margin-bottom:6px">Giá (VNĐ) *</label>
+          <input type="number" id="cakePrice" placeholder="250000" min="0" required
+            style="width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:var(--font-body);color:var(--text);background:var(--bg);outline:none;transition:all .3s" />
+        </div>
+      </div>
+
+      <div class="form-group" style="margin:14px 0">
+        <label style="display:block;font-size:13px;font-weight:700;color:var(--text);margin-bottom:6px">Danh mục chính *</label>
+        <select id="cakeCategory"
+          style="width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:var(--font-body);color:var(--text);background:var(--bg);outline:none">
+          <option value="birthday">Bánh sinh nhật</option>
+          <option value="mini">Bánh Mini</option>
+          <option value="fruit">Bánh Hoa quả</option>
+          <option value="square">Bánh Vuông</option>
+          <option value="male">Bánh cho Nam</option>
+          <option value="female">Bánh cho Nữ</option>
+          <option value="boy">Bánh cho Bé Trai</option>
+          <option value="girl">Bánh cho Bé Gái</option>
+          <option value="troll">Bánh Troll &amp; Vui nhộn</option>
+        </select>
+      </div>
+
+      <!-- Multi-tag attributes -->
+      <div style="background:var(--bg-dark);padding:14px;border-radius:10px;border:1px solid var(--border);margin-bottom:16px">
+        <div style="font-size:12.5px;font-weight:700;color:var(--secondary);margin-bottom:8px">👥 Đối tượng phù hợp:</div>
+        <div style="display:flex;flex-wrap:wrap;gap:12px;font-size:13px" id="audienceChecks">
+          <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" value="male" /> Nam</label>
+          <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" value="female" /> Nữ</label>
+          <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" value="boy" /> Bé trai</label>
+          <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" value="girl" /> Bé gái</label>
+          <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" value="kids" /> Trẻ em</label>
+        </div>
+
+        <div style="font-size:12.5px;font-weight:700;color:var(--secondary);margin:12px 0 8px">🎂 Kiểu bánh:</div>
+        <div style="display:flex;flex-wrap:wrap;gap:12px;font-size:13px" id="typeChecks">
+          <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" value="mini" /> Mini</label>
+          <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" value="fruit" /> Hoa quả</label>
+          <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" value="square" /> Vuông</label>
+          <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" value="custom-shaped" /> Tạo hình</label>
+        </div>
+
+        <div style="font-size:12.5px;font-weight:700;color:var(--secondary);margin:12px 0 8px">✨ Phong cách:</div>
+        <div style="display:flex;flex-wrap:wrap;gap:12px;font-size:13px" id="styleChecks">
+          <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" value="elegant" /> Thanh lịch</label>
+          <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" value="cute" /> Dễ thương</label>
+          <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" value="luxury" /> Sang trọng</label>
+          <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" value="funny" /> Troll / Vui nhộn</label>
+        </div>
+      </div>
+
+      <div class="form-group" style="margin-bottom:20px">
+        <label style="display:block;font-size:13px;font-weight:700;color:var(--text);margin-bottom:6px">Mô tả ngắn</label>
+        <textarea id="cakeDesc" placeholder="Mô tả nguyên liệu, kích thước, đặc điểm của bánh..."
+          style="width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:var(--font-body);color:var(--text);background:var(--bg);outline:none;min-height:75px;resize:vertical"></textarea>
+      </div>
+
+      <div style="display:flex;gap:10px">
+        <button type="button" class="btn btn-secondary" id="cakeModalCancelBtn" style="flex:1">Hủy</button>
+        <button type="submit" class="btn btn-primary" style="flex:2">💾 Lưu bánh</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="adminToast"></div>
+
+<!-- Scripts -->
+<script src="js/config.js"></script>
+<script src="js/admin.js"></script>
+</body>
+</html>
