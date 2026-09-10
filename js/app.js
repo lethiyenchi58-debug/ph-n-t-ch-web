@@ -63,9 +63,11 @@ function applyConfig() {
   const footerZaloIcon = document.getElementById("footer-zalo");
   if (footerZaloIcon) footerZaloIcon.href = zaloUrl;
 
-  // Floating Zalo
+  // Floating Zalo & Maps
   const floatZalo = document.getElementById("floatZalo");
   if (floatZalo) floatZalo.href = zaloUrl;
+  const floatMaps = document.getElementById("floatMaps");
+  if (floatMaps && cfg.mapsUrl) floatMaps.href = cfg.mapsUrl;
 
   // Direct Zalo btn (custom section)
   const directZaloBtn = document.getElementById("directZaloBtn");
@@ -495,16 +497,11 @@ function createCakeCard(cake) {
       <div class="cake-footer">
         <span class="cake-price">${formatPrice(cake.price)}</span>
         <div class="cake-card-actions">
-          <button class="btn-card-detail" data-id="${cake.id}">Chi tiết</button>
-          <button class="btn-order-zalo" data-id="${cake.id}">💬 Đặt Zalo</button>
+          <button class="btn-order-zalo" data-id="${cake.id}">Đặt bánh ngay</button>
         </div>
       </div>
     </div>`;
 
-  card.querySelector(".btn-card-detail").addEventListener("click", (e) => {
-    e.stopPropagation();
-    openOrderModal(cake);
-  });
   card.querySelector(".btn-order-zalo").addEventListener("click", (e) => {
     e.stopPropagation();
     openOrderModal(cake);
