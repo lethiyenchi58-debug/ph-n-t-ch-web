@@ -52,9 +52,9 @@ function applyConfig() {
   document.getElementById("footer-address").textContent =
     cfg.shopAddress || "173 Vạn Phúc - Hà Đông, Hà Nội, Việt Nam";
   const footerPhone = document.getElementById("footer-phone");
-  if (footerPhone) { footerPhone.textContent = formatPhone(cfg.shopPhone || zalo); footerPhone.href = `tel:${cfg.shopPhone || zalo}`; }
+  if (footerPhone) { footerPhone.textContent = `📱 ${formatPhone(cfg.shopPhone || zalo)}`; footerPhone.href = `tel:${cfg.shopPhone || zalo}`; }
   const footerZaloLink = document.getElementById("footer-zalo-link");
-  if (footerZaloLink) { footerZaloLink.textContent = `Zalo: ${formatPhone(zalo)}`; footerZaloLink.href = zaloUrl; footerZaloLink.target = "_blank"; }
+  if (footerZaloLink) { footerZaloLink.textContent = `💬 Zalo: ${formatPhone(zalo)}`; footerZaloLink.href = zaloUrl; footerZaloLink.target = "_blank"; }
 
   const footerFb = document.getElementById("footer-facebook");
   if (footerFb && cfg.facebookUrl && cfg.facebookUrl !== "#") {
