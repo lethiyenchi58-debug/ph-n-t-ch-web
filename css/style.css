@@ -234,12 +234,24 @@ ul { list-style: none; }
 .hero-slide.active { opacity: 1; pointer-events: auto; }
 
 .hero-slide-bg {
-  position: absolute; inset: 0;
+  position: absolute; inset: -15px;
   background-size: cover; background-position: center;
+  filter: blur(8px) brightness(0.5);
+  transform: scale(1.08);
+  transition: opacity 1.2s ease, filter 0.5s ease;
 }
-.slide-bg-1 { background: linear-gradient(135deg, #241105 0%, #4a210a 45%, #78350f 100%); }
-.slide-bg-2 { background: linear-gradient(135deg, #381a07 0%, #6d320d 45%, #b45309 100%); }
-.slide-bg-3 { background: linear-gradient(135deg, #1b0c03 0%, #3d1a06 50%, #92400e 100%); }
+.slide-bg-1 {
+  background-image: linear-gradient(to right, rgba(18, 9, 3, 0.82) 0%, rgba(35, 17, 6, 0.5) 60%, rgba(10, 5, 2, 0.55) 100%), url('../images/hero-bg-1.jpg');
+  background-position: center 40%;
+}
+.slide-bg-2 {
+  background-image: linear-gradient(to right, rgba(18, 9, 3, 0.82) 0%, rgba(35, 17, 6, 0.5) 60%, rgba(10, 5, 2, 0.55) 100%), url('../images/hero-bg-2.png');
+  background-position: center center;
+}
+.slide-bg-3 {
+  background-image: linear-gradient(to right, rgba(18, 9, 3, 0.82) 0%, rgba(35, 17, 6, 0.5) 60%, rgba(10, 5, 2, 0.55) 100%), url('../images/hero-bg-3.jpg');
+  background-position: center 30%;
+}
 
 /* Decorative circles */
 .hero-circle-1, .hero-circle-2 {
