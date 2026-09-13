@@ -234,45 +234,23 @@ ul { list-style: none; }
 .hero-slide.active { opacity: 1; pointer-events: auto; }
 
 .hero-slide-bg {
-  position: absolute; inset: -15px;
+  position: absolute; inset: -10px;
   background-size: cover; background-position: center;
-  filter: blur(8px) brightness(0.5);
-  transform: scale(1.08);
+  filter: blur(2px) brightness(0.72);
+  transform: scale(1.03);
   transition: opacity 1.2s ease, filter 0.5s ease;
 }
 .slide-bg-1 {
-  background-image: linear-gradient(to right, rgba(18, 9, 3, 0.82) 0%, rgba(35, 17, 6, 0.5) 60%, rgba(10, 5, 2, 0.55) 100%), url('../images/hero-bg-1.jpg');
+  background-image: linear-gradient(to right, rgba(15, 7, 3, 0.85) 0%, rgba(20, 10, 5, 0.6) 45%, rgba(0, 0, 0, 0.25) 80%, rgba(0, 0, 0, 0.15) 100%), url('../images/hero-bg-1.jpg');
   background-position: center 40%;
 }
 .slide-bg-2 {
-  background-image: linear-gradient(to right, rgba(18, 9, 3, 0.82) 0%, rgba(35, 17, 6, 0.5) 60%, rgba(10, 5, 2, 0.55) 100%), url('../images/hero-bg-2.png');
+  background-image: linear-gradient(to right, rgba(15, 7, 3, 0.85) 0%, rgba(20, 10, 5, 0.6) 45%, rgba(0, 0, 0, 0.25) 80%, rgba(0, 0, 0, 0.15) 100%), url('../images/hero-bg-2.png');
   background-position: center center;
 }
 .slide-bg-3 {
-  background-image: linear-gradient(to right, rgba(18, 9, 3, 0.82) 0%, rgba(35, 17, 6, 0.5) 60%, rgba(10, 5, 2, 0.55) 100%), url('../images/hero-bg-3.jpg');
+  background-image: linear-gradient(to right, rgba(15, 7, 3, 0.85) 0%, rgba(20, 10, 5, 0.6) 45%, rgba(0, 0, 0, 0.25) 80%, rgba(0, 0, 0, 0.15) 100%), url('../images/hero-bg-3.jpg');
   background-position: center 30%;
-}
-
-/* Decorative circles */
-.hero-circle-1, .hero-circle-2 {
-  position: absolute; border-radius: 50%;
-  background: rgba(254,243,199,.08);
-  pointer-events: none;
-}
-.hero-circle-1 { width: 450px; height: 450px; right: -5%; top: -20%; }
-.hero-circle-2 { width: 250px; height: 250px; right: 18%; top: 10%; background: rgba(254,243,199,.05); }
-
-/* Hero emoji decor */
-.hero-emoji-decor {
-  position: absolute; right: 8%; top: 50%;
-  transform: translateY(-50%);
-  font-size: 200px; opacity: .12;
-  pointer-events: none; user-select: none;
-  animation: float 5s ease-in-out infinite;
-}
-@keyframes float {
-  0%, 100% { transform: translateY(-50%) rotate(-5deg); }
-  50%       { transform: translateY(-55%) rotate(5deg); }
 }
 
 .hero-content {
