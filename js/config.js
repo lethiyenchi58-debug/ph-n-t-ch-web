@@ -8,6 +8,7 @@ const MITU_DEFAULTS = {
   shopAddress: "173 Vạn Phúc - Hà Đông, Hà Nội, Việt Nam",
   shopPhone: "0936290932",
   zaloPhone: "0936290932",
+  tiktokUrl: "https://www.tiktok.com/@tiembanhmitu",
   mapsUrl: "https://www.google.com/maps/search/?api=1&query=173+V%E1%BA%A1n+Ph%C3%BAc+-+H%C3%A0+%C4%90%C3%B4ng%2C+H%C3%A0+N%E1%BB%99i",
   facebookUrl: "https://www.facebook.com/profile.php?id=100063580955032",
   adminUser: "admin",
@@ -201,14 +202,15 @@ const MITU_DEFAULT_CAKES = [
     try { cfg = JSON.parse(existing); } catch(e) { cfg = null; }
   }
 
-  // Cập nhật nếu chưa có hoặc đang lưu thông tin mẫu cũ 0900000000
-  if (!cfg || cfg.shopPhone === "0900000000" || cfg.zaloPhone === "0900000000" || !cfg.shopAddress || cfg.shopAddress.includes("Địa chỉ tiệm bánh của bạn")) {
+  // Cập nhật nếu chưa có hoặc đang lưu thông tin mẫu cũ 0900000000 hoặc chưa có tiktokUrl
+  if (!cfg || cfg.shopPhone === "0900000000" || cfg.zaloPhone === "0900000000" || !cfg.shopAddress || cfg.shopAddress.includes("Địa chỉ tiệm bánh của bạn") || !cfg.tiktokUrl) {
     const updatedCfg = {
       shopName: cfg?.shopName || MITU_DEFAULTS.shopName,
       shopSlogan: cfg?.shopSlogan || MITU_DEFAULTS.shopSlogan,
       shopAddress: MITU_DEFAULTS.shopAddress,
       shopPhone: MITU_DEFAULTS.shopPhone,
       zaloPhone: MITU_DEFAULTS.zaloPhone,
+      tiktokUrl: cfg?.tiktokUrl || MITU_DEFAULTS.tiktokUrl,
       facebookUrl: cfg?.facebookUrl || MITU_DEFAULTS.facebookUrl,
     };
     localStorage.setItem("mitu_config", JSON.stringify(updatedCfg));

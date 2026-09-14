@@ -46,6 +46,10 @@ function applyConfig() {
   const navZaloBtn = document.getElementById("nav-zalo-btn");
   if (navZaloBtn) navZaloBtn.href = zaloUrl;
 
+  // Hero Zalo button
+  const heroZaloBtn = document.getElementById("heroZaloBtn");
+  if (heroZaloBtn) heroZaloBtn.href = zaloUrl;
+
   // Footer
   document.getElementById("footerSlogan").textContent =
     cfg.shopSlogan || "Bánh ngọt handmade – Tình yêu trong từng chiếc bánh.";
@@ -53,15 +57,32 @@ function applyConfig() {
     cfg.shopAddress || "173 Vạn Phúc - Hà Đông, Hà Nội, Việt Nam";
   const footerPhone = document.getElementById("footer-phone");
   if (footerPhone) { footerPhone.textContent = `📱 ${formatPhone(cfg.shopPhone || zalo)}`; footerPhone.href = `tel:${cfg.shopPhone || zalo}`; }
+  const footerPhoneContact = document.getElementById("footer-phone-contact");
+  if (footerPhoneContact) { footerPhoneContact.textContent = formatPhone(cfg.shopPhone || zalo); footerPhoneContact.href = `tel:${cfg.shopPhone || zalo}`; }
+
   const footerZaloLink = document.getElementById("footer-zalo-link");
   if (footerZaloLink) { footerZaloLink.textContent = `💬 Zalo: ${formatPhone(zalo)}`; footerZaloLink.href = zaloUrl; footerZaloLink.target = "_blank"; }
+  const footerZaloContact = document.getElementById("footer-zalo-contact");
+  if (footerZaloContact) { footerZaloContact.textContent = `Zalo: ${formatPhone(zalo)}`; footerZaloContact.href = zaloUrl; footerZaloContact.target = "_blank"; }
 
   const footerFb = document.getElementById("footer-facebook");
   if (footerFb && cfg.facebookUrl && cfg.facebookUrl !== "#") {
     footerFb.href = cfg.facebookUrl;
   }
+  const footerFbIcon = document.getElementById("footer-facebook-icon");
+  if (footerFbIcon && cfg.facebookUrl && cfg.facebookUrl !== "#") {
+    footerFbIcon.href = cfg.facebookUrl;
+  }
   const footerZaloIcon = document.getElementById("footer-zalo");
   if (footerZaloIcon) footerZaloIcon.href = zaloUrl;
+
+  const footerTiktok = document.getElementById("footer-tiktok");
+  if (footerTiktok) {
+    footerTiktok.href = cfg.tiktokUrl || "https://www.tiktok.com/@tiembanhmitu";
+    footerTiktok.target = "_blank";
+    footerTiktok.rel = "noopener noreferrer";
+    footerTiktok.onclick = null;
+  }
 
   // Floating Zalo & Maps
   const floatZalo = document.getElementById("floatZalo");

@@ -493,6 +493,7 @@ function initSettings() {
       shopSlogan:  document.getElementById("s-shopSlogan").value.trim() || cfg.shopSlogan,
       shopAddress: document.getElementById("s-shopAddress").value.trim() || cfg.shopAddress,
       facebookUrl: document.getElementById("s-facebookUrl").value.trim() || cfg.facebookUrl,
+      tiktokUrl:   document.getElementById("s-tiktokUrl")?.value.trim() || cfg.tiktokUrl || "https://www.tiktok.com/@tiembanhmitu",
     };
     localStorage.setItem("mitu_config", JSON.stringify(updated));
     showToast("✅ Đã lưu thông tin tiệm!", "success");
@@ -550,6 +551,7 @@ function loadSettings() {
   document.getElementById("s-shopSlogan").value  = cfg.shopSlogan || "";
   document.getElementById("s-shopAddress").value = cfg.shopAddress || "";
   document.getElementById("s-facebookUrl").value = cfg.facebookUrl || "";
+  if (document.getElementById("s-tiktokUrl")) document.getElementById("s-tiktokUrl").value = cfg.tiktokUrl || "https://www.tiktok.com/@tiembanhmitu";
 }
 
 // ── CONFIRM DIALOG ────────────────────────────────────────────
