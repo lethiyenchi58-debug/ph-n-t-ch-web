@@ -1097,7 +1097,76 @@ ul { list-style: none; }
   color: var(--text-light);
 }
 
-/* Feedback Grid */
+/* Feedback Slider Conveyor (Vòng quay tương tự menu bánh hôm nay) */
+.feedback-slider-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin: 10px 0 45px;
+  width: 100%;
+}
+.feedback-slider-track {
+  display: flex;
+  gap: 24px;
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  padding: 16px 6px;
+  width: 100%;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.feedback-slider-track::-webkit-scrollbar {
+  display: none;
+}
+.feedback-slider-track .feedback-card {
+  flex: 0 0 320px;
+  min-width: 320px;
+  max-width: 320px;
+}
+.feedback-slider-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--white);
+  color: var(--primary-dark);
+  border: 1.5px solid var(--border);
+  box-shadow: 0 4px 16px rgba(92,48,22,0.18);
+  font-size: 24px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all .25s ease;
+}
+.feedback-slider-arrow:hover {
+  background: var(--primary);
+  color: var(--white);
+  border-color: var(--primary);
+  transform: translateY(-50%) scale(1.1);
+}
+.feedback-slider-arrow.prev {
+  left: -20px;
+}
+.feedback-slider-arrow.next {
+  right: -20px;
+}
+
+@media (max-width: 768px) {
+  .feedback-slider-track .feedback-card {
+    flex: 0 0 280px;
+    min-width: 280px;
+    max-width: 280px;
+  }
+  .feedback-slider-arrow.prev { left: -8px; width: 36px; height: 36px; font-size: 20px; }
+  .feedback-slider-arrow.next { right: -8px; width: 36px; height: 36px; font-size: 20px; }
+}
+
+/* Feedback Grid (Fallback / Static) */
 .feedback-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);

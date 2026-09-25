@@ -195,6 +195,59 @@ const MITU_DEFAULT_CAKES = [
   }
 ];
 
+const MITU_DEFAULT_FEEDBACKS = [
+  {
+    id: "fb-1",
+    image: "images/feedback/feedback-1.png",
+    name: "Thảo My",
+    channel: "💬 Phản hồi qua Zalo",
+    quote: "“Bánh xinh quá anh ạ 💕”",
+    badge: "🎂 Bánh sinh nhật gấu nhỏ",
+    caption: "Bánh sinh nhật tạo hình gấu con xinh xắn",
+    context: "Mẫu bánh kem tone trắng kem nơ hồng đính kèm chú gấu nhỏ đội mũ tiệc ngọt ngào, tinh tế từng chi tiết."
+  },
+  {
+    id: "fb-2",
+    image: "images/feedback/feedback-2.png",
+    name: "Quỳnh Trang",
+    channel: "💬 Phản hồi qua Zalo",
+    quote: "“Bánh xinh nhaaaa - Gửi tiệm feedback ✨”",
+    badge: "🍓 Bánh hoa quả & Bàn tiệc",
+    caption: "Bàn tiệc hoa quả & Bánh kem tươi sinh nhật tháng 8",
+    context: "Bánh kem tươi phủ ngập tràn xoài tươi, dâu tây và việt quất hòa quyện cùng bàn tiệc liên hoan đầy ắp sắc màu."
+  },
+  {
+    id: "fb-3",
+    image: "images/feedback/feedback-3.png",
+    name: "Anh Tuấn",
+    channel: "💬 Phản hồi qua Zalo",
+    quote: "“Bánh xinh lắm nha người đẹp 🥰”",
+    badge: "🌿 Bánh thiết kế & Hoa tươi",
+    caption: "Bánh kem nho xanh pastel & Bó hoa cát tường trắng",
+    context: "Khách hàng rạng rỡ đón sinh nhật bên mẫu bánh kem nho xanh phong cách Hàn Quốc cùng bó hoa tươi tinh tế."
+  },
+  {
+    id: "fb-4",
+    image: "images/feedback/feedback-4.png",
+    name: "Thu Hương",
+    channel: "💬 Phản hồi qua Zalo",
+    quote: "“Bánh xinh ạ - Chúc mừng sinh nhật Mẹ ❤️”",
+    badge: "💖 Mừng sinh nhật Mẹ",
+    caption: "Bánh trái tim dâu tây số 40 mừng sinh nhật Mẹ",
+    context: "Chiếc bánh hình trái tim đầy ắp dâu tây đỏ tươi mọng, số 40 mạ vàng kim lung linh dưới ánh nến sinh nhật gia đình ấm áp."
+  },
+  {
+    id: "fb-5",
+    image: "images/feedback/feedback-5.png",
+    name: "Phương Thảo",
+    channel: "💬 Phản hồi qua Zalo",
+    quote: "“C ơi bánh xinh thế 💕”",
+    badge: "✨ Tiệc tối lãng mạn",
+    caption: "Bánh kem trái tim thắp đèn neon Love tiệc tối lãng mạn",
+    context: "Bánh kem trái tim phủ bột cacao viền sóng kem, gắn đèn neon chữ Love lung linh trong không gian tiệc tối lãng mạn."
+  }
+];
+
 // Khởi tạo config nếu chưa có trong localStorage hoặc cập nhật nếu đang là giá trị mẫu cũ
 (function initConfig() {
   const existing = localStorage.getItem("mitu_config");
@@ -238,6 +291,13 @@ const MITU_DEFAULT_CAKES = [
   if (!today || !today.ids || today.ids.length === 0) {
     localStorage.setItem("mitu_today", JSON.stringify({ date: todayDate, ids: cakes.map(c => c.id) }));
   }
+
+  // Khởi tạo danh sách feedback nếu chưa có
+  let feedbacks = null;
+  try { feedbacks = JSON.parse(localStorage.getItem("mitu_feedbacks") || "null"); } catch(e) { feedbacks = null; }
+  if (!feedbacks || !Array.isArray(feedbacks) || feedbacks.length === 0) {
+    localStorage.setItem("mitu_feedbacks", JSON.stringify(MITU_DEFAULT_FEEDBACKS));
+  }
 })();
 
 /**
@@ -252,6 +312,25 @@ function getConfig() {
  */
 function getCakes() {
   return JSON.parse(localStorage.getItem("mitu_cakes") || "[]");
+}
+
+/**
+ * Lấy danh sách ảnh feedback khách hàng
+ */
+function getFeedbacks() {
+  try {
+    const list = JSON.parse(localStorage.getItem("mitu_feedbacks") || "null");
+    if (Array.isArray(list) && list.length > 0) return list;
+  } catch(e) {}
+  localStorage.setItem("mitu_feedbacks", JSON.stringify(MITU_DEFAULT_FEEDBACKS));
+  return MITU_DEFAULT_FEEDBACKS;
+}
+
+/**
+ * Lưu danh sách ảnh feedback khách hàng
+ */
+function saveFeedbacks(list) {
+  localStorage.setItem("mitu_feedbacks", JSON.stringify(list || []));
 }
 
 /**

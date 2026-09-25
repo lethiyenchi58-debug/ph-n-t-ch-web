@@ -301,127 +301,13 @@
       </div>
     </div>
 
-    <!-- Feedback Grid -->
-    <div class="feedback-grid" id="feedbackGrid">
-      <!-- Item 1 -->
-      <div class="feedback-card" data-index="0" data-img="images/feedback/feedback-1.png" data-caption="Bánh sinh nhật tạo hình gấu con xinh xắn" data-quote="“Bánh xinh quá anh ạ 💕”">
-        <div class="feedback-img-wrapper" title="Nhấn để xem chi tiết ảnh">
-          <img src="images/feedback/feedback-1.png" alt="Feedback bánh sinh nhật Mitu" loading="lazy" />
-          <div class="feedback-zoom-hint">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14zM12 10h-2v2H9v-2H7V9h2V7h1v2h2v1z"/></svg>
-            <span>Phóng to</span>
-          </div>
-          <span class="feedback-card-badge">🎂 Bánh sinh nhật gấu nhỏ</span>
-        </div>
-        <div class="feedback-card-content">
-          <div class="feedback-stars">★★★★★</div>
-          <blockquote class="feedback-quote">“Bánh xinh quá anh ạ 💕”</blockquote>
-          <p class="feedback-context">Mẫu bánh kem tone trắng kem nơ hồng đính kèm chú gấu nhỏ đội mũ tiệc ngọt ngào, tinh tế từng chi tiết.</p>
-          <div class="feedback-author">
-            <div class="author-avatar">TM</div>
-            <div class="author-info">
-              <span class="author-name">Thảo My</span>
-              <span class="author-channel">💬 Phản hồi qua Zalo</span>
-            </div>
-          </div>
-        </div>
+    <!-- Feedback Conveyor Slider / Vòng quay ảnh phản hồi -->
+    <div class="feedback-slider-wrapper" id="feedbackSliderWrap">
+      <button class="feedback-slider-arrow prev" id="feedbackSliderPrev" aria-label="Feedback trước">‹</button>
+      <div class="feedback-slider-track" id="feedbackSliderTrack">
+        <!-- Rendered dynamically by app.js from getFeedbacks() -->
       </div>
-
-      <!-- Item 2 -->
-      <div class="feedback-card" data-index="1" data-img="images/feedback/feedback-2.png" data-caption="Bàn tiệc hoa quả & Bánh kem tươi sinh nhật tháng 8" data-quote="“Bánh xinh nhaaaa - Gửi tiệm feedback ✨”">
-        <div class="feedback-img-wrapper" title="Nhấn để xem chi tiết ảnh">
-          <img src="images/feedback/feedback-2.png" alt="Feedback tiệc sinh nhật bánh hoa quả" loading="lazy" />
-          <div class="feedback-zoom-hint">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14zM12 10h-2v2H9v-2H7V9h2V7h1v2h2v1z"/></svg>
-            <span>Phóng to</span>
-          </div>
-          <span class="feedback-card-badge">🍓 Bánh hoa quả &amp; Bàn tiệc</span>
-        </div>
-        <div class="feedback-card-content">
-          <div class="feedback-stars">★★★★★</div>
-          <blockquote class="feedback-quote">“Bánh xinh nhaaaa - Gửi tiệm feedback ✨”</blockquote>
-          <p class="feedback-context">Bánh kem tươi phủ ngập tràn xoài tươi, dâu tây và việt quất hòa quyện cùng bàn tiệc liên hoan đầy ắp sắc màu.</p>
-          <div class="feedback-author">
-            <div class="author-avatar">QT</div>
-            <div class="author-info">
-              <span class="author-name">Quỳnh Trang</span>
-              <span class="author-channel">💬 Phản hồi qua Zalo</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Item 3 -->
-      <div class="feedback-card" data-index="2" data-img="images/feedback/feedback-3.png" data-caption="Bánh kem nho xanh pastel & Bó hoa cát tường trắng" data-quote="“Bánh xinh lắm nha người đẹp - Em cảm ơn nhiều ạ! 🥰”">
-        <div class="feedback-img-wrapper" title="Nhấn để xem chi tiết ảnh">
-          <img src="images/feedback/feedback-3.png" alt="Feedback khách hàng nhận bánh và hoa sinh nhật" loading="lazy" />
-          <div class="feedback-zoom-hint">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14zM12 10h-2v2H9v-2H7V9h2V7h1v2h2v1z"/></svg>
-            <span>Phóng to</span>
-          </div>
-          <span class="feedback-card-badge">🌿 Bánh thiết kế &amp; Hoa tươi</span>
-        </div>
-        <div class="feedback-card-content">
-          <div class="feedback-stars">★★★★★</div>
-          <blockquote class="feedback-quote">“Bánh xinh lắm nha người đẹp 🥰”</blockquote>
-          <p class="feedback-context">Khách hàng rạng rỡ đón sinh nhật bên mẫu bánh kem nho xanh phong cách Hàn Quốc cùng bó hoa tươi tinh tế.</p>
-          <div class="feedback-author">
-            <div class="author-avatar">AT</div>
-            <div class="author-info">
-              <span class="author-name">Anh Tuấn</span>
-              <span class="author-channel">💬 Phản hồi qua Zalo</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Item 4 -->
-      <div class="feedback-card" data-index="3" data-img="images/feedback/feedback-4.png" data-caption="Bánh trái tim dâu tây số 40 mừng sinh nhật Mẹ" data-quote="“Bánh xinh ạ - Chúc mừng sinh nhật Mẹ ❤️”">
-        <div class="feedback-img-wrapper" title="Nhấn để xem chi tiết ảnh">
-          <img src="images/feedback/feedback-4.png" alt="Feedback bánh trái tim sinh nhật Mẹ" loading="lazy" />
-          <div class="feedback-zoom-hint">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14zM12 10h-2v2H9v-2H7V9h2V7h1v2h2v1z"/></svg>
-            <span>Phóng to</span>
-          </div>
-          <span class="feedback-card-badge">💖 Mừng sinh nhật Mẹ</span>
-        </div>
-        <div class="feedback-card-content">
-          <div class="feedback-stars">★★★★★</div>
-          <blockquote class="feedback-quote">“Bánh xinh ạ - Chúc mừng sinh nhật Mẹ ❤️”</blockquote>
-          <p class="feedback-context">Chiếc bánh hình trái tim đầy ắp dâu tây đỏ tươi mọng, số 40 mạ vàng kim lung linh dưới ánh nến sinh nhật gia đình ấm áp.</p>
-          <div class="feedback-author">
-            <div class="author-avatar">TH</div>
-            <div class="author-info">
-              <span class="author-name">Thu Hương</span>
-              <span class="author-channel">💬 Phản hồi qua Zalo</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Item 5 -->
-      <div class="feedback-card" data-index="4" data-img="images/feedback/feedback-5.png" data-caption="Bánh kem trái tim thắp đèn neon Love tiệc tối lãng mạn" data-quote="“C ơi bánh xinh thế 💕”">
-        <div class="feedback-img-wrapper" title="Nhấn để xem chi tiết ảnh">
-          <img src="images/feedback/feedback-5.png" alt="Feedback bánh kem tiệc tối sinh nhật Chồng" loading="lazy" />
-          <div class="feedback-zoom-hint">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14zM12 10h-2v2H9v-2H7V9h2V7h1v2h2v1z"/></svg>
-            <span>Phóng to</span>
-          </div>
-          <span class="feedback-card-badge">✨ Tiệc tối lãng mạn</span>
-        </div>
-        <div class="feedback-card-content">
-          <div class="feedback-stars">★★★★★</div>
-          <blockquote class="feedback-quote">“C ơi bánh xinh thế 💕”</blockquote>
-          <p class="feedback-context">Bánh kem trái tim phủ bột cacao viền sóng kem, gắn đèn neon chữ Love lung linh trong không gian tiệc tối lãng mạn.</p>
-          <div class="feedback-author">
-            <div class="author-avatar">PT</div>
-            <div class="author-info">
-              <span class="author-name">Phương Thảo</span>
-              <span class="author-channel">💬 Phản hồi qua Zalo</span>
-            </div>
-          </div>
-        </div>
-      </div>
+      <button class="feedback-slider-arrow next" id="feedbackSliderNext" aria-label="Feedback tiếp">›</button>
     </div>
 
     <!-- CTA Box -->
