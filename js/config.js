@@ -9,6 +9,7 @@ const MITU_DEFAULTS = {
   shopPhone: "0936290932",
   zaloPhone: "0936290932",
   tiktokUrl: "https://www.tiktok.com/@tiembanhmitu",
+  instagramUrl: "https://www.instagram.com/tiembanh_mitu/",
   mapsUrl: "https://www.google.com/maps/search/?api=1&query=173+V%E1%BA%A1n+Ph%C3%BAc+-+H%C3%A0+%C4%90%C3%B4ng%2C+H%C3%A0+N%E1%BB%99i",
   facebookUrl: "https://www.facebook.com/profile.php?id=100063580955032",
   adminUser: "admin",
