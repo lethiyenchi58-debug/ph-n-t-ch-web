@@ -28,6 +28,7 @@ document.addEventListener("DOMContentLoaded", () => {
   initNav();
   initCustomForm();
   initModal();
+  initFeedbackLightbox();
   initSmoothScroll();
 });
 
@@ -123,6 +124,10 @@ function applyConfig() {
   // Direct Zalo btn (custom section)
   const directZaloBtn = document.getElementById("directZaloBtn");
   if (directZaloBtn) directZaloBtn.href = zaloUrl;
+
+  // Feedback Zalo CTA
+  const feedbackZaloBtn = document.getElementById("feedbackZaloBtn");
+  if (feedbackZaloBtn) feedbackZaloBtn.href = zaloUrl;
 }
 
 // ── Today date ────────────────────────────────────────────────
@@ -940,6 +945,74 @@ function closeModal() {
   document.getElementById("orderModal").classList.remove("show");
   document.body.style.overflow = "";
   currentOrderCake = null;
+}
+
+// ── Feedback Lightbox ─────────────────────────────────────────
+function initFeedbackLightbox() {
+  const lightbox = document.getElementById("feedbackLightbox");
+  if (!lightbox) return;
+
+  const lbImg = document.getElementById("fbLightboxImg");
+  const lbCaption = document.getElementById("fbLightboxCaption");
+  const lbQuote = document.getElementById("fbLightboxQuote");
+  const closeBtn = document.getElementById("fbLightboxClose");
+  const backdrop = document.getElementById("fbLightboxBackdrop");
+  const prevBtn = document.getElementById("fbLightboxPrev");
+  const nextBtn = document.getElementById("fbLightboxNext");
+
+  const cards = Array.from(document.querySelectorAll("#feedbackGrid .feedback-card"));
+  if (cards.length === 0) return;
+
+  let currentIndex = 0;
+
+  function showFeedback(index) {
+    if (index < 0) index = cards.length - 1;
+    if (index >= cards.length) index = 0;
+    currentIndex = index;
+
+    const card = cards[currentIndex];
+    const imgSrc = card.getAttribute("data-img") || card.querySelector("img")?.src;
+    const caption = card.getAttribute("data-caption") || "";
+    const quote = card.getAttribute("data-quote") || "";
+
+    if (lbImg) lbImg.src = imgSrc;
+    if (lbCaption) lbCaption.textContent = caption;
+    if (lbQuote) lbQuote.textContent = quote;
+
+    lightbox.classList.add("active");
+    lightbox.setAttribute("aria-hidden", "false");
+    document.body.style.overflow = "hidden";
+  }
+
+  function closeFeedback() {
+    lightbox.classList.remove("active");
+    lightbox.setAttribute("aria-hidden", "true");
+    document.body.style.overflow = "";
+  }
+
+  cards.forEach((card, idx) => {
+    card.addEventListener("click", () => showFeedback(idx));
+  });
+
+  closeBtn?.addEventListener("click", closeFeedback);
+  backdrop?.addEventListener("click", closeFeedback);
+
+  prevBtn?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    showFeedback(currentIndex - 1);
+  });
+
+  nextBtn?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    showFeedback(currentIndex + 1);
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (!lightbox.classList.contains("active")) return;
+    if (e.key === "Escape") closeFeedback();
+    else if (e.key === "ArrowLeft") showFeedback(currentIndex - 1);
+    else if (e.key === "ArrowRight") showFeedback(currentIndex + 1);
+  });
 }
 
 function buildCakeOrderMsg(cake) {
