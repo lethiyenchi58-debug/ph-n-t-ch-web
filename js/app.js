@@ -8,6 +8,8 @@ let currentSlide        = 0;
 let slideInterval       = null;
 let todayConveyorAnimId = null;
 let currentOrderCake    = null;
+let currentSearch       = "";
+let currentViewMode     = "slider"; // 'slider' | 'grid'
 
 // Multi-tag catalog filters
 let currentFilters = {
@@ -84,6 +86,19 @@ function applyConfig() {
     footerTiktok.onclick = null;
   }
 
+  const footerInsta = document.getElementById("footer-instagram");
+  if (footerInsta) {
+    footerInsta.href = cfg.instagramUrl || "https://www.instagram.com/tiembanh_mitu/";
+    footerInsta.target = "_blank";
+    footerInsta.rel = "noopener noreferrer";
+  }
+  const footerInstaIcon = document.getElementById("footer-instagram-icon");
+  if (footerInstaIcon) {
+    footerInstaIcon.href = cfg.instagramUrl || "https://www.instagram.com/tiembanh_mitu/";
+    footerInstaIcon.target = "_blank";
+    footerInstaIcon.rel = "noopener noreferrer";
+  }
+
   // Floating Zalo & Maps
   const floatZalo = document.getElementById("floatZalo");
   if (floatZalo) floatZalo.href = zaloUrl;
@@ -109,19 +124,65 @@ function initCatalog() {
   // 1. Read filters from URL params if present
   applyFiltersFromUrl();
 
-  // 2. Main Category Pills
+  // 2. Main Category Pills (Horizontal Scroll Bar)
   const catPills = document.querySelectorAll("#mainCatBar .cat-pill");
   catPills.forEach(btn => {
     btn.addEventListener("click", () => {
       const cat = btn.dataset.cat || "all";
       currentFilters.category = cat;
+      // Smoothly center the clicked pill on mobile
+      btn.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
       updateFilterUI();
       renderCakeGrid();
       updateUrlFromFilters();
     });
   });
 
-  // 3. Header Dropdown Items
+  // 3. Instant Search Input
+  const searchInput = document.getElementById("cakeSearchInput");
+  const clearSearchBtn = document.getElementById("clearSearchBtn");
+
+  searchInput?.addEventListener("input", (e) => {
+    currentSearch = e.target.value.trim().toLowerCase();
+    clearSearchBtn?.classList.toggle("hidden", !currentSearch);
+    if (currentSearch && currentViewMode === "slider") {
+      // Auto-switch to grid mode when searching so user sees results clearly
+      currentViewMode = "grid";
+      document.getElementById("btnModeGrid")?.classList.add("active");
+      document.getElementById("btnModeSlider")?.classList.remove("active");
+    }
+    updateFilterUI();
+    renderCakeGrid();
+  });
+
+  clearSearchBtn?.addEventListener("click", () => {
+    if (searchInput) searchInput.value = "";
+    currentSearch = "";
+    clearSearchBtn?.classList.add("hidden");
+    updateFilterUI();
+    renderCakeGrid();
+    searchInput?.focus();
+  });
+
+  // 4. View Mode Toggle (Slider vs Grid)
+  const btnModeSlider = document.getElementById("btnModeSlider");
+  const btnModeGrid   = document.getElementById("btnModeGrid");
+
+  btnModeSlider?.addEventListener("click", () => {
+    currentViewMode = "slider";
+    btnModeSlider.classList.add("active");
+    btnModeGrid?.classList.remove("active");
+    renderCakeGrid();
+  });
+
+  btnModeGrid?.addEventListener("click", () => {
+    currentViewMode = "grid";
+    btnModeGrid.classList.add("active");
+    btnModeSlider?.classList.remove("active");
+    renderCakeGrid();
+  });
+
+  // 5. Header Dropdown Items
   const dropdownLinks = document.querySelectorAll(".nav-dropdown-menu a[data-cat]");
   dropdownLinks.forEach(link => {
     link.addEventListener("click", (e) => {
@@ -135,41 +196,19 @@ function initCatalog() {
       // Smooth scroll to catalog section
       const catalogEl = document.getElementById("today");
       if (catalogEl) {
-        const offset = document.querySelector(".header")?.offsetHeight || 80;
+        const offset = document.querySelector(".header")?.offsetHeight || 70;
         window.scrollTo({ top: catalogEl.offsetTop - offset, behavior: "smooth" });
       }
 
       // Close mobile menu if open
       document.getElementById("navLinks")?.classList.remove("open");
+      document.getElementById("hamburger")?.classList.remove("active");
+      document.getElementById("navOverlay")?.classList.remove("show");
     });
   });
 
-  // 4. Detailed Filter Chips (Audience, Type, Style)
-  const filterChips = document.querySelectorAll(".filter-chip");
-  filterChips.forEach(chip => {
-    chip.addEventListener("click", () => {
-      const filterType = chip.dataset.filter;
-      const filterVal  = chip.dataset.val;
-
-      if (!filterType) return;
-      currentFilters[filterType] = filterVal;
-
-      updateFilterUI();
-      renderCakeGrid();
-      updateUrlFromFilters();
-    });
-  });
-
-  // 5. Reset / Clear Filters Buttons
+  // 6. Reset / Clear Filters Buttons
   document.getElementById("clearFiltersBtn")?.addEventListener("click", clearAllFilters);
-
-  // 6. Mobile Filter Toggle Accordion
-  const toggleBtn = document.getElementById("filterToggleBtn");
-  const filterBox = document.getElementById("catalogFilterBox");
-  toggleBtn?.addEventListener("click", () => {
-    const isOpen = filterBox.classList.toggle("open-mobile");
-    toggleBtn.classList.toggle("open", isOpen);
-  });
 
   // 7. Popstate event (browser Back/Forward navigation)
   window.addEventListener("popstate", () => {
@@ -189,6 +228,11 @@ function clearAllFilters() {
     type: "all",
     style: "all"
   };
+  currentSearch = "";
+  const sInput = document.getElementById("cakeSearchInput");
+  if (sInput) sInput.value = "";
+  document.getElementById("clearSearchBtn")?.classList.add("hidden");
+
   updateFilterUI();
   renderCakeGrid();
   updateUrlFromFilters();
@@ -309,8 +353,20 @@ function updateFilterUI() {
   }
 }
 
-// ── Match Cake Logic (Multi-tag & multi-category) ─────────────
-function matchCake(cake, f) {
+// ── Match Cake Logic (Multi-tag, search & multi-category) ─────
+function matchCake(cake, f, searchStr = "") {
+  // 0. Search term check
+  if (searchStr) {
+    const q = searchStr.toLowerCase();
+    const nameMatch = cake.name?.toLowerCase().includes(q);
+    const descMatch = (cake.desc || cake.description || "").toLowerCase().includes(q);
+    const catMatch  = (getCategoryLabel(cake.category) || "").toLowerCase().includes(q);
+    const tagMatch  = [...(cake.audience || []), ...(cake.type || []), ...(cake.style || [])]
+      .some(t => (getAudienceLabel(t) || getTypeLabel(t) || getStyleLabel(t) || t).toLowerCase().includes(q));
+
+    if (!nameMatch && !descMatch && !catMatch && !tagMatch) return false;
+  }
+
   // 1. Category check
   if (f.category && f.category !== "all") {
     let matchCat = false;
@@ -359,6 +415,7 @@ function renderCakeGrid() {
 
   const allCakes = getCakes();
   const isNoFilter = (
+    !currentSearch &&
     currentFilters.category === "all" &&
     currentFilters.audience === "all" &&
     currentFilters.type === "all" &&
@@ -375,38 +432,60 @@ function renderCakeGrid() {
       displayedCakes = allCakes;
     }
   } else {
-    displayedCakes = allCakes.filter(c => matchCake(c, currentFilters));
+    displayedCakes = allCakes.filter(c => matchCake(c, currentFilters, currentSearch));
   }
 
-  // Update Result Count text (Hidden when no filter is selected)
+  // Update Result Count text & Clear Button
   const countEl = document.getElementById("filterResultCount");
+  const clearBtn = document.getElementById("clearFiltersBtn");
+
   if (countEl) {
     if (isNoFilter) {
       countEl.textContent = "";
       countEl.style.display = "none";
     } else {
-      countEl.textContent = `Hiển thị ${displayedCakes.length} mẫu bánh`;
-      countEl.style.display = "inline";
+      countEl.textContent = `Tìm thấy ${displayedCakes.length} mẫu bánh`;
+      countEl.style.display = "inline-flex";
     }
+  }
+
+  if (clearBtn) {
+    clearBtn.classList.toggle("hidden", isNoFilter);
+  }
+
+  // Sync mode buttons UI
+  const btnModeSlider = document.getElementById("btnModeSlider");
+  const btnModeGrid   = document.getElementById("btnModeGrid");
+  if (isNoFilter) {
+    btnModeSlider?.classList.toggle("active", currentViewMode === "slider");
+    btnModeGrid?.classList.toggle("active", currentViewMode === "grid");
+  } else {
+    // When filtered/searching, always highlight Grid mode
+    btnModeSlider?.classList.remove("active");
+    btnModeGrid?.classList.add("active");
   }
 
   grid.innerHTML = "";
 
   if (displayedCakes.length === 0) {
+    grid.className = "cake-grid";
     grid.innerHTML = `
-      <div class="empty-menu">
-        <div class="empty-icon">🔍</div>
-        <h3>Chưa có mẫu bánh phù hợp</h3>
-        <p>Không tìm thấy chiếc bánh nào khớp với tất cả bộ lọc bạn đã chọn. Hãy thử bỏ bớt tiêu chí hoặc bấm nút bên dưới để xem toàn bộ bánh nhé!</p>
-        <button class="btn-reset-filters-empty" onclick="clearAllFilters()">
-          ↺ Xóa tất cả bộ lọc
+      <div class="empty-menu" style="grid-column: 1 / -1; text-align: center; padding: 40px 16px;">
+        <div class="empty-icon" style="font-size: 54px; margin-bottom: 12px;">🔍</div>
+        <h3 style="font-size: 19px; font-weight: 700; margin-bottom: 8px; color: var(--text);">Chưa có mẫu bánh phù hợp</h3>
+        <p style="font-size: 13.5px; color: var(--text-light); max-width: 440px; margin: 0 auto 16px;">Không tìm thấy mẫu bánh nào khớp với từ khóa "${escHtml(currentSearch)}" hoặc bộ lọc đang chọn. Bạn hãy thử từ khóa khác nhé!</p>
+        <button class="btn-clear-filters" style="display:inline-block; padding: 8px 20px; font-size: 13px;" onclick="clearAllFilters()">
+          ↺ Xem tất cả bánh
         </button>
       </div>`;
     return;
   }
 
-  if (isNoFilter) {
-    // Continuous Infinite Conveyor Belt Mode (Băng chuyền liên tục)
+  // Determine whether to show Conveyor Slider or Grid View
+  const useSliderMode = isNoFilter && currentViewMode === "slider";
+
+  if (useSliderMode) {
+    // Continuous Infinite Conveyor Belt Mode
     grid.className = "cake-grid-slider-mode";
 
     const sliderWrap = document.createElement("div");
@@ -443,7 +522,7 @@ function renderCakeGrid() {
       todayConveyorAnimId = requestAnimationFrame(animateConveyor);
     }
 
-    // Hover / touch events: pause on hover, resume on leave
+    // Touch & mouse interaction: pause on touch/hover
     sliderWrap.addEventListener("mouseenter", () => { isPaused = true; });
     sliderWrap.addEventListener("mouseleave", () => { isPaused = false; });
     sliderWrap.addEventListener("touchstart", () => { isPaused = true; }, { passive: true });
@@ -454,16 +533,16 @@ function renderCakeGrid() {
     const nextBtn = sliderWrap.querySelector("#todaySliderNext");
 
     prevBtn?.addEventListener("click", () => {
-      track.scrollBy({ left: -300, behavior: "smooth" });
+      track.scrollBy({ left: -260, behavior: "smooth" });
     });
     nextBtn?.addEventListener("click", () => {
-      track.scrollBy({ left: 300, behavior: "smooth" });
+      track.scrollBy({ left: 260, behavior: "smooth" });
     });
 
     // Start continuous animation
     animateConveyor();
   } else {
-    // Normal Grid View when filters are active
+    // Normal Grid View (2 columns on mobile, 4 columns on desktop)
     grid.className = "cake-grid";
     displayedCakes.forEach(cake => {
       const card = createCakeCard(cake);
@@ -616,13 +695,25 @@ function initHeroSlider() {
     });
   });
 
-  // Touch swipe
+  // Enhanced Touch Swipe for Mobile
   let touchStartX = 0;
+  let touchStartY = 0;
   const heroEl = document.querySelector(".hero");
-  heroEl?.addEventListener("touchstart", e => { touchStartX = e.touches[0].clientX; }, { passive: true });
+
+  heroEl?.addEventListener("touchstart", e => {
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+  }, { passive: true });
+
   heroEl?.addEventListener("touchend", e => {
-    const diff = touchStartX - e.changedTouches[0].clientX;
-    if (Math.abs(diff) > 50) { clearInterval(slideInterval); diff > 0 ? next() : prev(); slideInterval = setInterval(next, 5000); }
+    const diffX = touchStartX - e.changedTouches[0].clientX;
+    const diffY = touchStartY - e.changedTouches[0].clientY;
+    // Only trigger horizontal slide if lateral swipe distance exceeds vertical move
+    if (Math.abs(diffX) > 40 && Math.abs(diffX) > Math.abs(diffY)) {
+      clearInterval(slideInterval);
+      diffX > 0 ? next() : prev();
+      slideInterval = setInterval(next, 5000);
+    }
   }, { passive: true });
 }
 
@@ -630,16 +721,39 @@ function initHeroSlider() {
 function initNav() {
   const hamburger = document.getElementById("hamburger");
   const navLinks  = document.getElementById("navLinks");
+  const navOverlay = document.getElementById("navOverlay");
   const dropdownToggle = document.getElementById("navMenuBtn");
   const dropdownItem = document.getElementById("navMenuDropdown");
 
-  hamburger?.addEventListener("click", () => {
-    navLinks.classList.toggle("open");
-    const isOpen = navLinks.classList.contains("open");
-    hamburger.setAttribute("aria-expanded", isOpen);
+  function closeNavDrawer() {
+    navLinks?.classList.remove("open");
+    hamburger?.classList.remove("active");
+    hamburger?.setAttribute("aria-expanded", "false");
+    navOverlay?.classList.remove("show");
+    dropdownItem?.classList.remove("open-mobile");
+    document.body.style.overflow = "";
+  }
+
+  function toggleNavDrawer() {
+    const willOpen = !navLinks?.classList.contains("open");
+    navLinks?.classList.toggle("open", willOpen);
+    hamburger?.classList.toggle("active", willOpen);
+    hamburger?.setAttribute("aria-expanded", willOpen ? "true" : "false");
+    navOverlay?.classList.toggle("show", willOpen);
+    if (willOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+  }
+
+  hamburger?.addEventListener("click", toggleNavDrawer);
+  navOverlay?.addEventListener("click", closeNavDrawer);
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeNavDrawer();
   });
 
-  // Mobile dropdown toggle
+  // Mobile dropdown toggle inside drawer
   dropdownToggle?.addEventListener("click", (e) => {
     if (window.innerWidth <= 768) {
       e.preventDefault();
@@ -647,15 +761,22 @@ function initNav() {
     }
   });
 
-  // Close nav when clicking standard link (excluding dropdown toggle)
+  // Close nav when clicking standard links
   navLinks?.querySelectorAll("a:not(#navMenuBtn)").forEach(a => {
-    a.addEventListener("click", () => {
-      navLinks.classList.remove("open");
-      dropdownItem?.classList.remove("open-mobile");
+    a.addEventListener("click", closeNavDrawer);
+  });
+
+  // Bottom Navigation Sync on Mobile
+  const bnavItems = document.querySelectorAll(".mobile-bottom-nav .bnav-item[href^='#']");
+  bnavItems.forEach(item => {
+    item.addEventListener("click", (e) => {
+      closeNavDrawer();
+      bnavItems.forEach(b => b.classList.remove("active"));
+      item.classList.add("active");
     });
   });
 
-  // Active link on scroll
+  // Active link on scroll (Syncs Desktop Nav & Mobile Bottom Nav)
   const sections = document.querySelectorAll("section[id], .hero[id]");
   const links = document.querySelectorAll(".nav-links a[href^='#']");
 
@@ -664,9 +785,10 @@ function initNav() {
       if (entry.isIntersecting) {
         const id = entry.target.id;
         links.forEach(l => l.classList.toggle("active", l.getAttribute("href") === `#${id}`));
+        bnavItems.forEach(b => b.classList.toggle("active", b.getAttribute("href") === `#${id}`));
       }
     });
-  }, { threshold: 0.35 });
+  }, { threshold: 0.3 });
 
   sections.forEach(s => observer.observe(s));
 }
@@ -675,11 +797,14 @@ function initNav() {
 function initSmoothScroll() {
   document.querySelectorAll('a[href^="#"]').forEach(a => {
     a.addEventListener("click", e => {
-      const target = document.querySelector(a.getAttribute("href"));
+      const href = a.getAttribute("href");
+      if (href === "#" || href === "#!") return;
+      const target = document.querySelector(href);
       if (target) {
         e.preventDefault();
-        const offset = document.querySelector(".header").offsetHeight;
-        window.scrollTo({ top: target.offsetTop - offset, behavior: "smooth" });
+        const headerH = document.querySelector(".header")?.offsetHeight || 65;
+        const targetTop = target.offsetTop - headerH;
+        window.scrollTo({ top: Math.max(0, targetTop), behavior: "smooth" });
       }
     });
   });
@@ -733,10 +858,25 @@ function buildCustomOrderMsg({ name, phone, type, note }) {
 function initModal() {
   const overlay = document.getElementById("orderModal");
   const closeBtn = document.getElementById("modalClose");
+  const dragHandle = overlay?.querySelector(".modal-drag-handle");
 
   closeBtn?.addEventListener("click", closeModal);
+  dragHandle?.addEventListener("click", closeModal);
   overlay?.addEventListener("click", e => { if (e.target === overlay) closeModal(); });
   document.addEventListener("keydown", e => { if (e.key === "Escape") closeModal(); });
+
+  // Touch drag down to dismiss modal on mobile
+  let modalTouchStartY = 0;
+  const modalBox = overlay?.querySelector(".modal");
+  modalBox?.addEventListener("touchstart", e => {
+    modalTouchStartY = e.touches[0].clientY;
+  }, { passive: true });
+  modalBox?.addEventListener("touchend", e => {
+    const diffY = e.changedTouches[0].clientY - modalTouchStartY;
+    if (diffY > 90 && modalBox.scrollTop <= 5) {
+      closeModal();
+    }
+  }, { passive: true });
 
   document.getElementById("copyMsgBtn")?.addEventListener("click", () => {
     if (!currentOrderCake) return;

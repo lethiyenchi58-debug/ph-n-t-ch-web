@@ -97,14 +97,29 @@ function initSidebar() {
       topbarTitle.textContent = titles[panelId] || panelId;
 
       // Close sidebar on mobile
-      if (window.innerWidth <= 768) sidebar.classList.remove("open");
+      if (window.innerWidth <= 768) {
+        sidebar.classList.remove("open");
+        document.getElementById("sidebarOverlay")?.classList.remove("show");
+      }
     });
   });
 
-  // Mobile toggle
+  // Mobile toggle and overlay
+  const overlay = document.getElementById("sidebarOverlay");
+  const closeBtn = document.getElementById("sidebarCloseBtn");
+
+  function closeMobileSidebar() {
+    sidebar.classList.remove("open");
+    overlay?.classList.remove("show");
+  }
+
   document.getElementById("sidebarToggle")?.addEventListener("click", () => {
     sidebar.classList.toggle("open");
+    overlay?.classList.toggle("show", sidebar.classList.contains("open"));
   });
+
+  overlay?.addEventListener("click", closeMobileSidebar);
+  closeBtn?.addEventListener("click", closeMobileSidebar);
 }
 
 // ── Topbar ────────────────────────────────────────────────────
@@ -494,6 +509,7 @@ function initSettings() {
       shopAddress: document.getElementById("s-shopAddress").value.trim() || cfg.shopAddress,
       facebookUrl: document.getElementById("s-facebookUrl").value.trim() || cfg.facebookUrl,
       tiktokUrl:   document.getElementById("s-tiktokUrl")?.value.trim() || cfg.tiktokUrl || "https://www.tiktok.com/@tiembanhmitu",
+      instagramUrl: document.getElementById("s-instagramUrl")?.value.trim() || cfg.instagramUrl || "https://www.instagram.com/tiembanh_mitu/",
     };
     localStorage.setItem("mitu_config", JSON.stringify(updated));
     showToast("✅ Đã lưu thông tin tiệm!", "success");
@@ -552,6 +568,7 @@ function loadSettings() {
   document.getElementById("s-shopAddress").value = cfg.shopAddress || "";
   document.getElementById("s-facebookUrl").value = cfg.facebookUrl || "";
   if (document.getElementById("s-tiktokUrl")) document.getElementById("s-tiktokUrl").value = cfg.tiktokUrl || "https://www.tiktok.com/@tiembanhmitu";
+  if (document.getElementById("s-instagramUrl")) document.getElementById("s-instagramUrl").value = cfg.instagramUrl || "https://www.instagram.com/tiembanh_mitu/";
 }
 
 // ── CONFIRM DIALOG ────────────────────────────────────────────
