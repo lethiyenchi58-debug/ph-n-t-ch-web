@@ -212,79 +212,47 @@
 <!-- ==================== CUSTOM ORDER ==================== -->
 <section class="section custom-section" id="custom">
   <div class="container">
-    <div class="custom-inner">
-      <!-- Left: Info -->
-      <div class="custom-left">
-        <div class="section-tag">✏️ Thiết kế riêng</div>
-        <h2 class="section-title">Bánh đặt<br>theo mẫu</h2>
-        <p class="section-desc">
-          Bạn có hình mẫu bánh muốn đặt? Gửi yêu cầu qua Zalo, chủ tiệm sẽ tư vấn và báo giá nhanh nhất!
-        </p>
+    <div class="custom-showcase">
+      <div class="section-tag-center">
+        <span class="section-tag">✏️ Thiết kế riêng</span>
+      </div>
+      <h2 class="section-title text-center text-white">Bánh đặt theo mẫu</h2>
+      <p class="section-desc text-center text-white-muted">
+        Bạn có hình mẫu bánh muốn đặt? Chỉ cần gửi ảnh mẫu trực tiếp qua Zalo, chủ tiệm Mitu sẽ tư vấn kích thước, hương vị và báo giá nhanh nhất!
+      </p>
 
-        <ul class="feature-list">
-          <li>
-            <span class="feat-icon">🎨</span>
-            Thiết kế theo hình mẫu bạn thích
-          </li>
-          <li>
-            <span class="feat-icon">💬</span>
-            Tư vấn miễn phí qua Zalo
-          </li>
-          <li>
-            <span class="feat-icon">⏰</span>
-            Đặt trước ít nhất 1–2 ngày
-          </li>
-          <li>
-            <span class="feat-icon">📦</span>
-            Giao hàng hoặc nhận tại tiệm
-          </li>
-          <li>
-            <span class="feat-icon">✅</span>
-            Đảm bảo nguyên liệu tươi ngon
-          </li>
-        </ul>
-
-        <a href="https://zalo.me/0936290932" class="btn btn-primary" id="directZaloBtn" target="_blank" rel="noopener noreferrer">
-          💬 Nhắn Zalo ngay
-        </a>
+      <!-- Feature cards grid -->
+      <div class="custom-features-grid">
+        <div class="custom-feat-card">
+          <div class="feat-card-icon">🎨</div>
+          <h4>Thiết kế theo mẫu</h4>
+          <p>Làm theo đúng mẫu ảnh bạn gửi, cá nhân hóa chữ viết và chi tiết trang trí.</p>
+        </div>
+        <div class="custom-feat-card">
+          <div class="feat-card-icon">💬</div>
+          <h4>Tư vấn Zalo 24/7</h4>
+          <p>Tư vấn mẫu mã, chọn size bánh và hương vị kem phù hợp bữa tiệc hoàn toàn miễn phí.</p>
+        </div>
+        <div class="custom-feat-card">
+          <div class="feat-card-icon">⏰</div>
+          <h4>Đặt trước 1–2 ngày</h4>
+          <p>Chuẩn bị nguyên liệu tươi ngon nhất, hoàn thiện tỉ mỉ và chuẩn vị từng chi tiết.</p>
+        </div>
+        <div class="custom-feat-card">
+          <div class="feat-card-icon">🚚</div>
+          <h4>Giao hàng tận nơi</h4>
+          <p>Hỗ trợ giao bánh tận nơi an toàn hoặc nhận trực tiếp tiện lợi tại cửa tiệm.</p>
+        </div>
       </div>
 
-      <!-- Right: Form -->
-      <div class="custom-right">
-        <div class="custom-form-card">
-          <div class="form-card-title">Gửi yêu cầu đặt bánh 🎂</div>
-          <div class="form-card-sub">Điền thông tin bên dưới, chúng tôi sẽ tư vấn và báo giá qua Zalo của bạn.</div>
-
-          <form id="customOrderForm" novalidate>
-            <div class="form-group">
-              <label for="custName">Họ tên của bạn *</label>
-              <input type="text" id="custName" placeholder="Nguyễn Văn A" required />
-            </div>
-            <div class="form-group">
-              <label for="custPhone">Số điện thoại / Zalo *</label>
-              <input type="tel" id="custPhone" placeholder="0912 345 678" required />
-            </div>
-            <div class="form-group">
-              <label for="custType">Loại bánh muốn đặt</label>
-              <select id="custType">
-                <option value="">-- Chọn loại bánh --</option>
-                <option value="Bánh sinh nhật">Bánh sinh nhật</option>
-                <option value="Bánh cưới / tiệc">Bánh cưới / tiệc</option>
-                <option value="Mousse">Mousse</option>
-                <option value="Cheesecake">Cheesecake</option>
-                <option value="Bánh kem">Bánh kem</option>
-                <option value="Khác">Khác</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label for="custNote">Mô tả yêu cầu (kích thước, chủ đề, màu sắc...)</label>
-              <textarea id="custNote" placeholder="VD: Bánh sinh nhật cho bé gái 5 tuổi, chủ đề unicorn, size 20cm, chữ 'Happy Birthday Lan'..."></textarea>
-            </div>
-            <button type="submit" class="btn-send-zalo">
-              <span>💬</span> Gửi yêu cầu qua Zalo
-            </button>
-          </form>
-        </div>
+      <!-- Action buttons -->
+      <div class="custom-actions">
+        <a href="https://zalo.me/0936290932" class="btn btn-primary btn-custom-zalo" id="directZaloBtn" target="_blank" rel="noopener noreferrer">
+          💬 Nhắn Zalo gửi mẫu bánh ngay
+        </a>
+        <a href="tel:0936290932" class="btn btn-outline-white btn-custom-phone" id="customPhoneBtn">
+          📞 Hotline: 0936 290 932
+        </a>
       </div>
     </div>
   </div>

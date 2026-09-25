@@ -26,7 +26,6 @@ document.addEventListener("DOMContentLoaded", () => {
   initCatalog();
   initHeroSlider();
   initNav();
-  initCustomForm();
   initModal();
   initFeedbackLightbox();
   initSmoothScroll();
@@ -124,6 +123,11 @@ function applyConfig() {
   // Direct Zalo btn (custom section)
   const directZaloBtn = document.getElementById("directZaloBtn");
   if (directZaloBtn) directZaloBtn.href = zaloUrl;
+  const customPhoneBtn = document.getElementById("customPhoneBtn");
+  if (customPhoneBtn) {
+    customPhoneBtn.href = `tel:${cfg.shopPhone || zalo}`;
+    customPhoneBtn.textContent = `📞 Hotline: ${formatPhone(cfg.shopPhone || zalo)}`;
+  }
 
   // Feedback Zalo CTA
   const feedbackZaloBtn = document.getElementById("feedbackZaloBtn");
@@ -828,50 +832,6 @@ function initSmoothScroll() {
       }
     });
   });
-}
-
-// ── Custom Order Form ─────────────────────────────────────────
-function initCustomForm() {
-  const form = document.getElementById("customOrderForm");
-  form?.addEventListener("submit", e => {
-    e.preventDefault();
-
-    const name  = document.getElementById("custName").value.trim();
-    const phone = document.getElementById("custPhone").value.trim();
-    const type  = document.getElementById("custType").value;
-    const note  = document.getElementById("custNote").value.trim();
-
-    if (!name || !phone) {
-      showToast("Vui lòng điền họ tên và số điện thoại!", "error");
-      return;
-    }
-
-    const cfg = getConfig();
-    const zalo = cfg.zaloPhone || "0936290932";
-
-    const msg = buildCustomOrderMsg({ name, phone, type, note });
-    copyToClipboard(msg);
-
-    showToast("✅ Đã sao chép nội dung! Mở Zalo và gửi cho chủ tiệm.", "success");
-
-    setTimeout(() => {
-      window.open(`https://zalo.me/${zalo.replace(/\s/g, "")}`, "_blank");
-    }, 600);
-  });
-}
-
-function buildCustomOrderMsg({ name, phone, type, note }) {
-  const lines = [
-    "🎂 YÊU CẦU ĐẶT BÁNH THEO MẪU",
-    "━━━━━━━━━━━━━━━━━━━━",
-    `👤 Tên: ${name}`,
-    `📱 Liên hệ: ${phone}`,
-  ];
-  if (type) lines.push(`🎂 Loại bánh: ${type}`);
-  if (note) lines.push(`📝 Yêu cầu:\n${note}`);
-  lines.push("━━━━━━━━━━━━━━━━━━━━");
-  lines.push("(Vui lòng báo giá và tư vấn giúp mình nhé ạ!)");
-  return lines.join("\n");
 }
 
 // ── Order Modal ───────────────────────────────────────────────
