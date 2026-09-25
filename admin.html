@@ -464,6 +464,9 @@
       <div class="sidebar-link" data-panel="today">
         <span class="s-icon">🌞</span> Menu hôm nay
       </div>
+      <div class="sidebar-link" data-panel="feedback">
+        <span class="s-icon">💖</span> Ảnh Feedback
+      </div>
 
       <div class="nav-section-label">Hệ thống</div>
       <div class="sidebar-link" data-panel="settings">
@@ -544,6 +547,21 @@
       </div>
 
       <div class="today-select-grid" id="todaySelectGrid">
+        <!-- rendered by admin.js -->
+      </div>
+    </div>
+
+    <!-- ── PANEL: Ảnh Feedback ── -->
+    <div class="admin-panel" id="panel-feedback">
+      <div class="panel-header">
+        <div>
+          <h2 class="panel-title">💖 Quản lý ảnh Feedback</h2>
+          <p style="font-size:13px;color:var(--text-light);margin-top:4px">Thêm, sửa, xóa các ảnh phản hồi thực tế từ khách hàng hiển thị trên vòng quay trang chủ.</p>
+        </div>
+        <button class="btn btn-primary" id="addFeedbackBtn">+ Thêm ảnh Feedback</button>
+      </div>
+
+      <div class="inventory-grid" id="adminFeedbackGrid">
         <!-- rendered by admin.js -->
       </div>
     </div>
@@ -720,6 +738,74 @@
       <div style="display:flex;gap:10px">
         <button type="button" class="btn btn-secondary" id="cakeModalCancelBtn" style="flex:1">Hủy</button>
         <button type="submit" class="btn btn-primary" style="flex:2">💾 Lưu bánh</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ==================== ADD/EDIT FEEDBACK MODAL ==================== -->
+<div class="modal-overlay" id="feedbackAdminModal" role="dialog" aria-modal="true">
+  <div class="a-modal" style="max-width:560px">
+    <button class="modal-close-btn" id="feedbackModalClose">×</button>
+    <h2 class="a-modal-title" id="feedbackModalTitle">➕ Thêm ảnh Feedback mới</h2>
+
+    <form id="feedbackAdminForm" novalidate>
+      <input type="hidden" id="fbEditId" />
+
+      <!-- Image upload / URL -->
+      <div class="form-group" style="margin-bottom:18px">
+        <label style="display:block;font-size:13px;font-weight:700;color:var(--text);margin-bottom:8px">Hình ảnh Feedback (ảnh chụp tiệc, bánh, tin nhắn Zalo) *</label>
+        <div class="img-upload-area" id="fbImgUploadArea">
+          <input type="file" id="fbImgFileInput" accept="image/*" />
+          <div id="fbImgUploadDefault">
+            <div class="img-upload-icon">📸</div>
+            <div class="img-upload-text">Nhấn hoặc kéo thả ảnh vào đây<br><strong>JPG, PNG, WebP</strong> – tối đa 5MB</div>
+          </div>
+          <div class="img-upload-preview" id="fbImgUploadPreview">
+            <img class="img-preview-img" id="fbImgPreviewEl" src="" alt="preview" />
+            <button type="button" class="btn btn-sm btn-secondary" id="removeFbImgBtn" style="margin-top:10px">✕ Xóa ảnh</button>
+          </div>
+        </div>
+        <div style="margin-top:8px">
+          <input type="text" id="fbImgUrl" placeholder="Hoặc dán đường dẫn ảnh / URL..."
+            style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:var(--font-body);color:var(--text);background:var(--bg);outline:none" />
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+        <div class="form-group">
+          <label style="display:block;font-size:13px;font-weight:700;color:var(--text);margin-bottom:6px">Tên khách hàng *</label>
+          <input type="text" id="fbName" placeholder="VD: Thảo My" required
+            style="width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:var(--font-body);color:var(--text);background:var(--bg);outline:none" />
+        </div>
+        <div class="form-group">
+          <label style="display:block;font-size:13px;font-weight:700;color:var(--text);margin-bottom:6px">Kênh phản hồi</label>
+          <input type="text" id="fbChannel" placeholder="VD: 💬 Phản hồi qua Zalo" value="💬 Phản hồi qua Zalo"
+            style="width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:var(--font-body);color:var(--text);background:var(--bg);outline:none" />
+        </div>
+      </div>
+
+      <div class="form-group" style="margin-bottom:14px">
+        <label style="display:block;font-size:13px;font-weight:700;color:var(--text);margin-bottom:6px">Lời khen / Tin nhắn khách *</label>
+        <input type="text" id="fbQuote" placeholder="VD: “Bánh xinh quá anh ạ 💕”" required
+          style="width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:var(--font-body);color:var(--text);background:var(--bg);outline:none" />
+      </div>
+
+      <div class="form-group" style="margin-bottom:14px">
+        <label style="display:block;font-size:13px;font-weight:700;color:var(--text);margin-bottom:6px">Nhãn bánh / Dịp sự kiện</label>
+        <input type="text" id="fbBadge" placeholder="VD: 🎂 Bánh sinh nhật gấu nhỏ"
+          style="width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:var(--font-body);color:var(--text);background:var(--bg);outline:none" />
+      </div>
+
+      <div class="form-group" style="margin-bottom:20px">
+        <label style="display:block;font-size:13px;font-weight:700;color:var(--text);margin-bottom:6px">Mô tả bánh / Chú thích ảnh</label>
+        <textarea id="fbContext" placeholder="VD: Mẫu bánh kem tone trắng kem nơ hồng đính kèm chú gấu nhỏ..."
+          style="width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:var(--font-body);color:var(--text);background:var(--bg);outline:none;min-height:70px;resize:vertical"></textarea>
+      </div>
+
+      <div style="display:flex;gap:10px">
+        <button type="button" class="btn btn-secondary" id="fbModalCancelBtn" style="flex:1">Hủy</button>
+        <button type="submit" class="btn btn-primary" style="flex:2">💾 Lưu Feedback</button>
       </div>
     </form>
   </div>

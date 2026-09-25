@@ -4,12 +4,13 @@
  */
 
 // ── Globals ──────────────────────────────────────────────────
-let currentSlide        = 0;
-let slideInterval       = null;
-let todayConveyorAnimId = null;
-let currentOrderCake    = null;
-let currentSearch       = "";
-let currentViewMode     = "slider"; // 'slider' | 'grid'
+let currentSlide           = 0;
+let slideInterval          = null;
+let todayConveyorAnimId    = null;
+let feedbackConveyorAnimId = null;
+let currentOrderCake       = null;
+let currentSearch          = "";
+let currentViewMode        = "slider"; // 'slider' | 'grid'
 
 // Multi-tag catalog filters
 let currentFilters = {
@@ -26,8 +27,9 @@ document.addEventListener("DOMContentLoaded", () => {
   initCatalog();
   initHeroSlider();
   initNav();
-  initCustomForm();
   initModal();
+  renderFeedbackSlider();
+  initFeedbackLightbox();
   initSmoothScroll();
 });
 
@@ -58,12 +60,27 @@ function applyConfig() {
   document.getElementById("footer-address").textContent =
     cfg.shopAddress || "173 Vạn Phúc - Hà Đông, Hà Nội, Việt Nam";
   const footerPhone = document.getElementById("footer-phone");
-  if (footerPhone) { footerPhone.textContent = `📱 ${formatPhone(cfg.shopPhone || zalo)}`; footerPhone.href = `tel:${cfg.shopPhone || zalo}`; }
+  const footerPhoneText = document.getElementById("footer-phone-text");
+  if (footerPhone) footerPhone.href = `tel:${cfg.shopPhone || zalo}`;
+  if (footerPhoneText) {
+    footerPhoneText.textContent = formatPhone(cfg.shopPhone || zalo);
+  } else if (footerPhone) {
+    footerPhone.textContent = `📱 ${formatPhone(cfg.shopPhone || zalo)}`;
+  }
   const footerPhoneContact = document.getElementById("footer-phone-contact");
   if (footerPhoneContact) { footerPhoneContact.textContent = formatPhone(cfg.shopPhone || zalo); footerPhoneContact.href = `tel:${cfg.shopPhone || zalo}`; }
 
   const footerZaloLink = document.getElementById("footer-zalo-link");
-  if (footerZaloLink) { footerZaloLink.textContent = `💬 Zalo: ${formatPhone(zalo)}`; footerZaloLink.href = zaloUrl; footerZaloLink.target = "_blank"; }
+  const footerZaloLinkText = document.getElementById("footer-zalo-link-text");
+  if (footerZaloLink) {
+    footerZaloLink.href = zaloUrl;
+    footerZaloLink.target = "_blank";
+  }
+  if (footerZaloLinkText) {
+    footerZaloLinkText.textContent = `Zalo: ${formatPhone(zalo)}`;
+  } else if (footerZaloLink) {
+    footerZaloLink.textContent = `💬 Zalo: ${formatPhone(zalo)}`;
+  }
   const footerZaloContact = document.getElementById("footer-zalo-contact");
   if (footerZaloContact) { footerZaloContact.textContent = `Zalo: ${formatPhone(zalo)}`; footerZaloContact.href = zaloUrl; footerZaloContact.target = "_blank"; }
 
@@ -108,6 +125,15 @@ function applyConfig() {
   // Direct Zalo btn (custom section)
   const directZaloBtn = document.getElementById("directZaloBtn");
   if (directZaloBtn) directZaloBtn.href = zaloUrl;
+  const customPhoneBtn = document.getElementById("customPhoneBtn");
+  if (customPhoneBtn) {
+    customPhoneBtn.href = `tel:${cfg.shopPhone || zalo}`;
+    customPhoneBtn.textContent = `📞 Hotline: ${formatPhone(cfg.shopPhone || zalo)}`;
+  }
+
+  // Feedback Zalo CTA
+  const feedbackZaloBtn = document.getElementById("feedbackZaloBtn");
+  if (feedbackZaloBtn) feedbackZaloBtn.href = zaloUrl;
 }
 
 // ── Today date ────────────────────────────────────────────────
@@ -810,50 +836,6 @@ function initSmoothScroll() {
   });
 }
 
-// ── Custom Order Form ─────────────────────────────────────────
-function initCustomForm() {
-  const form = document.getElementById("customOrderForm");
-  form?.addEventListener("submit", e => {
-    e.preventDefault();
-
-    const name  = document.getElementById("custName").value.trim();
-    const phone = document.getElementById("custPhone").value.trim();
-    const type  = document.getElementById("custType").value;
-    const note  = document.getElementById("custNote").value.trim();
-
-    if (!name || !phone) {
-      showToast("Vui lòng điền họ tên và số điện thoại!", "error");
-      return;
-    }
-
-    const cfg = getConfig();
-    const zalo = cfg.zaloPhone || "0936290932";
-
-    const msg = buildCustomOrderMsg({ name, phone, type, note });
-    copyToClipboard(msg);
-
-    showToast("✅ Đã sao chép nội dung! Mở Zalo và gửi cho chủ tiệm.", "success");
-
-    setTimeout(() => {
-      window.open(`https://zalo.me/${zalo.replace(/\s/g, "")}`, "_blank");
-    }, 600);
-  });
-}
-
-function buildCustomOrderMsg({ name, phone, type, note }) {
-  const lines = [
-    "🎂 YÊU CẦU ĐẶT BÁNH THEO MẪU",
-    "━━━━━━━━━━━━━━━━━━━━",
-    `👤 Tên: ${name}`,
-    `📱 Liên hệ: ${phone}`,
-  ];
-  if (type) lines.push(`🎂 Loại bánh: ${type}`);
-  if (note) lines.push(`📝 Yêu cầu:\n${note}`);
-  lines.push("━━━━━━━━━━━━━━━━━━━━");
-  lines.push("(Vui lòng báo giá và tư vấn giúp mình nhé ạ!)");
-  return lines.join("\n");
-}
-
 // ── Order Modal ───────────────────────────────────────────────
 function initModal() {
   const overlay = document.getElementById("orderModal");
@@ -925,6 +907,174 @@ function closeModal() {
   document.getElementById("orderModal").classList.remove("show");
   document.body.style.overflow = "";
   currentOrderCake = null;
+}
+
+// ── Feedback Conveyor Slider (Vòng quay phản hồi khách hàng) ──
+function renderFeedbackSlider() {
+  const track = document.getElementById("feedbackSliderTrack");
+  const sliderWrap = document.getElementById("feedbackSliderWrap");
+  if (!track || !sliderWrap) return;
+
+  if (feedbackConveyorAnimId) {
+    cancelAnimationFrame(feedbackConveyorAnimId);
+    feedbackConveyorAnimId = null;
+  }
+
+  const feedbacks = getFeedbacks();
+  if (!feedbacks || feedbacks.length === 0) {
+    track.innerHTML = `<div style="padding: 40px; text-align: center; color: var(--text-light); width: 100%;">Chưa có ảnh feedback nào.</div>`;
+    return;
+  }
+
+  track.innerHTML = "";
+
+  // Duplicate cards for seamless infinite conveyor rotation
+  const loopFeedbacks = [...feedbacks, ...feedbacks];
+
+  loopFeedbacks.forEach((fb, idx) => {
+    const card = createFeedbackCard(fb, idx % feedbacks.length);
+    track.appendChild(card);
+  });
+
+  let isPaused = false;
+  const speed = 0.75; // smooth conveyor speed in px/frame
+
+  function animateFeedbackConveyor() {
+    if (track && !isPaused) {
+      track.scrollLeft += speed;
+      const halfWidth = track.scrollWidth / 2;
+      if (halfWidth > 0 && track.scrollLeft >= halfWidth) {
+        track.scrollLeft -= halfWidth;
+      }
+    }
+    feedbackConveyorAnimId = requestAnimationFrame(animateFeedbackConveyor);
+  }
+
+  sliderWrap.addEventListener("mouseenter", () => { isPaused = true; });
+  sliderWrap.addEventListener("mouseleave", () => { isPaused = false; });
+  sliderWrap.addEventListener("touchstart", () => { isPaused = true; }, { passive: true });
+  sliderWrap.addEventListener("touchend", () => { isPaused = false; }, { passive: true });
+
+  const prevBtn = document.getElementById("feedbackSliderPrev");
+  const nextBtn = document.getElementById("feedbackSliderNext");
+
+  prevBtn?.addEventListener("click", () => {
+    track.scrollBy({ left: -320, behavior: "smooth" });
+  });
+  nextBtn?.addEventListener("click", () => {
+    track.scrollBy({ left: 320, behavior: "smooth" });
+  });
+
+  animateFeedbackConveyor();
+}
+
+function createFeedbackCard(fb, originalIndex) {
+  const card = document.createElement("div");
+  card.className = "feedback-card";
+  card.dataset.index = originalIndex;
+
+  const initials = (fb.name || "Khách")
+    .trim()
+    .split(/\s+/)
+    .map(w => w[0])
+    .join("")
+    .slice(-2)
+    .toUpperCase();
+
+  card.innerHTML = `
+    <div class="feedback-img-wrapper" title="Nhấn để xem chi tiết ảnh">
+      <img src="${escHtml(fb.image)}" alt="${escHtml(fb.caption || fb.name)}" loading="lazy" />
+      <div class="feedback-zoom-hint">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14zM12 10h-2v2H9v-2H7V9h2V7h1v2h2v1z"/></svg>
+        <span>Phóng to</span>
+      </div>
+      ${fb.badge ? `<span class="feedback-card-badge">${escHtml(fb.badge)}</span>` : ""}
+    </div>
+    <div class="feedback-card-content">
+      <div class="feedback-stars">★★★★★</div>
+      <blockquote class="feedback-quote">${escHtml(fb.quote || "Bánh rất ngon và đẹp!")}</blockquote>
+      <p class="feedback-context">${escHtml(fb.context || fb.caption || "Bánh handmade tươi ngon mỗi ngày.")}</p>
+      <div class="feedback-author">
+        <div class="author-avatar">${escHtml(initials)}</div>
+        <div class="author-info">
+          <span class="author-name">${escHtml(fb.name || "Khách hàng")}</span>
+          <span class="author-channel">${escHtml(fb.channel || "💬 Phản hồi qua Zalo")}</span>
+        </div>
+      </div>
+    </div>
+  `;
+
+  card.addEventListener("click", () => {
+    openFeedbackLightbox(originalIndex);
+  });
+
+  return card;
+}
+
+// ── Feedback Lightbox ─────────────────────────────────────────
+let currentFeedbackLightboxIndex = 0;
+
+function openFeedbackLightbox(index) {
+  const feedbacks = getFeedbacks();
+  if (!feedbacks || feedbacks.length === 0) return;
+
+  if (index < 0) index = feedbacks.length - 1;
+  if (index >= feedbacks.length) index = 0;
+  currentFeedbackLightboxIndex = index;
+
+  const fb = feedbacks[currentFeedbackLightboxIndex];
+  const lightbox = document.getElementById("feedbackLightbox");
+  const lbImg = document.getElementById("fbLightboxImg");
+  const lbCaption = document.getElementById("fbLightboxCaption");
+  const lbQuote = document.getElementById("fbLightboxQuote");
+
+  if (!lightbox) return;
+
+  if (lbImg) lbImg.src = fb.image;
+  if (lbCaption) lbCaption.textContent = fb.caption || fb.name || "Ảnh feedback từ khách hàng";
+  if (lbQuote) lbQuote.textContent = fb.quote ? `${fb.quote} — ${fb.name}` : fb.name;
+
+  lightbox.classList.add("active");
+  lightbox.setAttribute("aria-hidden", "false");
+  document.body.style.overflow = "hidden";
+}
+
+function closeFeedbackLightbox() {
+  const lightbox = document.getElementById("feedbackLightbox");
+  if (!lightbox) return;
+  lightbox.classList.remove("active");
+  lightbox.setAttribute("aria-hidden", "true");
+  document.body.style.overflow = "";
+}
+
+function initFeedbackLightbox() {
+  const lightbox = document.getElementById("feedbackLightbox");
+  if (!lightbox) return;
+
+  const closeBtn = document.getElementById("fbLightboxClose");
+  const backdrop = document.getElementById("fbLightboxBackdrop");
+  const prevBtn = document.getElementById("fbLightboxPrev");
+  const nextBtn = document.getElementById("fbLightboxNext");
+
+  closeBtn?.addEventListener("click", closeFeedbackLightbox);
+  backdrop?.addEventListener("click", closeFeedbackLightbox);
+
+  prevBtn?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    openFeedbackLightbox(currentFeedbackLightboxIndex - 1);
+  });
+
+  nextBtn?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    openFeedbackLightbox(currentFeedbackLightboxIndex + 1);
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (!lightbox.classList.contains("active")) return;
+    if (e.key === "Escape") closeFeedbackLightbox();
+    else if (e.key === "ArrowLeft") openFeedbackLightbox(currentFeedbackLightboxIndex - 1);
+    else if (e.key === "ArrowRight") openFeedbackLightbox(currentFeedbackLightboxIndex + 1);
+  });
 }
 
 function buildCakeOrderMsg(cake) {

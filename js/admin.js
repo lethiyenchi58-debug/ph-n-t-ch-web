@@ -4,11 +4,13 @@
  */
 
 // ── State ─────────────────────────────────────────────────────
-let editingCakeId   = null;   // null = thêm mới, string = đang sửa
-let uploadedImgB64  = null;   // base64 ảnh đang upload
-let selectedToday   = new Set(); // ID bánh chọn cho hôm nay
-let allCakes        = [];
-let invFilter       = { search: "", cat: "all" };
+let editingCakeId      = null;   // null = thêm mới, string = đang sửa
+let uploadedImgB64     = null;   // base64 ảnh đang upload
+let editingFeedbackId  = null;   // null = thêm mới, string = đang sửa
+let uploadedFbImgB64   = null;   // base64 ảnh feedback đang upload
+let selectedToday      = new Set(); // ID bánh chọn cho hôm nay
+let allCakes           = [];
+let invFilter          = { search: "", cat: "all" };
 
 // ── Init ─────────────────────────────────────────────────────
 document.addEventListener("DOMContentLoaded", () => {
@@ -18,6 +20,7 @@ document.addEventListener("DOMContentLoaded", () => {
   initTopbar();
   initInventory();
   initTodayPanel();
+  initFeedbackPanel();
   initSettings();
   initCakeModal();
   initLogout();
@@ -36,6 +39,7 @@ function showAdminLayout() {
   allCakes = getCakes();
   renderInventory();
   renderTodayPanel();
+  renderFeedbackPanel();
   loadSettings();
   updateTopbarDate();
 }
@@ -93,7 +97,7 @@ function initSidebar() {
       const panel = document.getElementById(`panel-${panelId}`);
       if (panel) panel.classList.add("active");
 
-      const titles = { inventory: "📦 Kho bánh", today: "🌞 Menu hôm nay", settings: "⚙️ Cài đặt" };
+      const titles = { inventory: "📦 Kho bánh", today: "🌞 Menu hôm nay", feedback: "💖 Ảnh Feedback", settings: "⚙️ Cài đặt" };
       topbarTitle.textContent = titles[panelId] || panelId;
 
       // Close sidebar on mobile
@@ -593,6 +597,264 @@ function showConfirm(title, msg, onConfirm) {
   });
 
   document.body.appendChild(overlay);
+}
+
+// ── FEEDBACK PANEL (Quản lý ảnh Feedback khách hàng) ──────────
+function initFeedbackPanel() {
+  document.getElementById("addFeedbackBtn")?.addEventListener("click", () => {
+    openFeedbackModal(null);
+  });
+
+  // Modal close handlers
+  document.getElementById("feedbackModalClose")?.addEventListener("click", closeFeedbackModal);
+  document.getElementById("fbModalCancelBtn")?.addEventListener("click", closeFeedbackModal);
+  document.getElementById("feedbackAdminModal")?.addEventListener("click", e => {
+    if (e.target.id === "feedbackAdminModal") closeFeedbackModal();
+  });
+
+  // Image Upload Area
+  const uploadArea = document.getElementById("fbImgUploadArea");
+  const fileInput  = document.getElementById("fbImgFileInput");
+  const urlInput   = document.getElementById("fbImgUrl");
+
+  uploadArea?.addEventListener("click", () => fileInput.click());
+
+  uploadArea?.addEventListener("dragover", e => { e.preventDefault(); uploadArea.classList.add("drag-over"); });
+  uploadArea?.addEventListener("dragleave", () => uploadArea.classList.remove("drag-over"));
+  uploadArea?.addEventListener("drop", e => {
+    e.preventDefault();
+    uploadArea.classList.remove("drag-over");
+    const file = e.dataTransfer.files[0];
+    if (file) handleFbImageFile(file);
+  });
+
+  fileInput?.addEventListener("change", () => {
+    if (fileInput.files[0]) handleFbImageFile(fileInput.files[0]);
+  });
+
+  urlInput?.addEventListener("input", () => {
+    const val = urlInput.value.trim();
+    if (val) {
+      uploadedFbImgB64 = null;
+      document.getElementById("fbImgPreviewEl").src = val;
+      document.getElementById("fbImgUploadPreview").classList.add("show");
+      document.getElementById("fbImgUploadDefault").style.display = "none";
+    }
+  });
+
+  document.getElementById("removeFbImgBtn")?.addEventListener("click", e => {
+    e.stopPropagation();
+    uploadedFbImgB64 = null;
+    document.getElementById("fbImgPreviewEl").src = "";
+    document.getElementById("fbImgUploadPreview").classList.remove("show");
+    document.getElementById("fbImgUploadDefault").style.display = "";
+    fileInput.value = "";
+    if (urlInput) urlInput.value = "";
+  });
+
+  // Form submit
+  document.getElementById("feedbackAdminForm")?.addEventListener("submit", e => {
+    e.preventDefault();
+    saveFeedback();
+  });
+}
+
+function handleFbImageFile(file) {
+  if (file.size > 5 * 1024 * 1024) {
+    showToast("❌ File quá lớn! Tối đa 5MB.", "error");
+    return;
+  }
+  if (!file.type.startsWith("image/")) {
+    showToast("❌ Vui lòng chọn file ảnh.", "error");
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = ev => {
+    uploadedFbImgB64 = ev.target.result;
+    document.getElementById("fbImgPreviewEl").src = uploadedFbImgB64;
+    document.getElementById("fbImgUploadPreview").classList.add("show");
+    document.getElementById("fbImgUploadDefault").style.display = "none";
+    const urlInput = document.getElementById("fbImgUrl");
+    if (urlInput) urlInput.value = "";
+  };
+  reader.readAsDataURL(file);
+}
+
+function renderFeedbackPanel() {
+  const grid = document.getElementById("adminFeedbackGrid");
+  if (!grid) return;
+
+  const feedbacks = getFeedbacks();
+  if (!feedbacks || feedbacks.length === 0) {
+    grid.innerHTML = `
+      <div class="empty-state" style="grid-column:1/-1">
+        <div class="empty-icon">💖</div>
+        <h3>Chưa có ảnh feedback nào</h3>
+        <p>Nhấn nút "+ Thêm ảnh Feedback" bên trên để thêm hình ảnh và phản hồi từ khách hàng.</p>
+      </div>`;
+    return;
+  }
+
+  grid.innerHTML = "";
+  feedbacks.forEach(fb => {
+    const card = document.createElement("div");
+    card.className = "inv-card";
+
+    const imgHTML = fb.image
+      ? `<img src="${escH(fb.image)}" alt="${escH(fb.caption || fb.name)}" />`
+      : `<div class="cake-img-placeholder">📸</div>`;
+
+    card.innerHTML = `
+      <div class="inv-card-img">
+        ${imgHTML}
+        ${fb.badge ? `<span class="inv-badge in-today" style="bottom:8px;top:auto">${escH(fb.badge)}</span>` : ""}
+      </div>
+      <div class="inv-card-body">
+        <div class="inv-card-name">${escH(fb.name)}</div>
+        <div style="font-size:12px;color:#0068ff;font-weight:600;margin-bottom:4px">${escH(fb.channel || "💬 Phản hồi Zalo")}</div>
+        <div style="font-size:13px;font-weight:700;color:var(--secondary);margin-bottom:4px;line-height:1.4">“${escH(fb.quote)}”</div>
+        <div style="font-size:12px;color:var(--text-light);line-height:1.4;margin-bottom:12px;flex:1">${escH(fb.context || fb.caption || "")}</div>
+        <div class="inv-card-actions">
+          <button class="btn btn-sm btn-secondary btn-edit-fb" data-id="${fb.id}">✏️ Sửa</button>
+          <button class="btn btn-sm btn-danger btn-delete-fb" data-id="${fb.id}">🗑️ Xóa</button>
+        </div>
+      </div>
+    `;
+
+    card.querySelector(".btn-edit-fb").addEventListener("click", () => openFeedbackModal(fb.id));
+    card.querySelector(".btn-delete-fb").addEventListener("click", () => {
+      confirmModal(
+        "Xóa ảnh Feedback",
+        `Bạn có chắc chắn muốn xóa phản hồi của "${fb.name}" không?`,
+        () => deleteFeedback(fb.id)
+      );
+    });
+
+    grid.appendChild(card);
+  });
+}
+
+function openFeedbackModal(id) {
+  editingFeedbackId = id;
+  const modal = document.getElementById("feedbackAdminModal");
+  const title = document.getElementById("feedbackModalTitle");
+  const fileInput = document.getElementById("fbImgFileInput");
+  const urlInput = document.getElementById("fbImgUrl");
+
+  // Reset form
+  document.getElementById("feedbackAdminForm").reset();
+  uploadedFbImgB64 = null;
+  document.getElementById("fbImgUploadPreview").classList.remove("show");
+  document.getElementById("fbImgUploadDefault").style.display = "";
+  document.getElementById("fbImgPreviewEl").src = "";
+  if (fileInput) fileInput.value = "";
+
+  if (id) {
+    title.textContent = "✏️ Sửa ảnh Feedback";
+    const feedbacks = getFeedbacks();
+    const fb = feedbacks.find(f => f.id === id);
+    if (!fb) return;
+
+    document.getElementById("fbEditId").value = fb.id;
+    document.getElementById("fbName").value = fb.name || "";
+    document.getElementById("fbChannel").value = fb.channel || "💬 Phản hồi qua Zalo";
+    document.getElementById("fbQuote").value = fb.quote || "";
+    document.getElementById("fbBadge").value = fb.badge || "";
+    document.getElementById("fbContext").value = fb.context || fb.caption || "";
+
+    if (fb.image) {
+      if (fb.image.startsWith("data:") || fb.image.startsWith("blob:")) {
+        uploadedFbImgB64 = fb.image;
+      } else if (urlInput) {
+        urlInput.value = fb.image;
+      }
+      document.getElementById("fbImgPreviewEl").src = fb.image;
+      document.getElementById("fbImgUploadPreview").classList.add("show");
+      document.getElementById("fbImgUploadDefault").style.display = "none";
+    }
+  } else {
+    title.textContent = "➕ Thêm ảnh Feedback mới";
+    document.getElementById("fbEditId").value = "";
+    document.getElementById("fbChannel").value = "💬 Phản hồi qua Zalo";
+  }
+
+  modal?.classList.add("show");
+}
+
+function closeFeedbackModal() {
+  document.getElementById("feedbackAdminModal")?.classList.remove("show");
+  editingFeedbackId = null;
+  uploadedFbImgB64 = null;
+}
+
+function saveFeedback() {
+  const name = document.getElementById("fbName").value.trim();
+  const quote = document.getElementById("fbQuote").value.trim();
+  const channel = document.getElementById("fbChannel").value.trim() || "💬 Phản hồi qua Zalo";
+  const badge = document.getElementById("fbBadge").value.trim();
+  const context = document.getElementById("fbContext").value.trim();
+  const urlInput = document.getElementById("fbImgUrl");
+  const imgUrlVal = urlInput ? urlInput.value.trim() : "";
+
+  if (!name || !quote) {
+    showToast("❌ Vui lòng nhập tên khách hàng và lời khen!", "error");
+    return;
+  }
+
+  const feedbacks = getFeedbacks();
+  let image = uploadedFbImgB64 || imgUrlVal;
+
+  if (!image && editingFeedbackId) {
+    const existing = feedbacks.find(f => f.id === editingFeedbackId);
+    if (existing) image = existing.image;
+  }
+
+  if (!image) {
+    showToast("❌ Vui lòng tải lên ảnh hoặc nhập link ảnh!", "error");
+    return;
+  }
+
+  if (editingFeedbackId) {
+    const idx = feedbacks.findIndex(f => f.id === editingFeedbackId);
+    if (idx !== -1) {
+      feedbacks[idx] = {
+        ...feedbacks[idx],
+        name,
+        quote,
+        channel,
+        badge,
+        context,
+        caption: context || badge || name,
+        image
+      };
+      showToast("✅ Đã cập nhật ảnh Feedback!", "success");
+    }
+  } else {
+    const newFb = {
+      id: "fb-" + generateId(),
+      name,
+      quote,
+      channel,
+      badge,
+      context,
+      caption: context || badge || name,
+      image
+    };
+    feedbacks.unshift(newFb);
+    showToast("✅ Đã thêm ảnh Feedback mới!", "success");
+  }
+
+  saveFeedbacks(feedbacks);
+  closeFeedbackModal();
+  renderFeedbackPanel();
+}
+
+function deleteFeedback(id) {
+  let feedbacks = getFeedbacks();
+  feedbacks = feedbacks.filter(f => f.id !== id);
+  saveFeedbacks(feedbacks);
+  renderFeedbackPanel();
+  showToast("🗑️ Đã xóa ảnh Feedback!", "success");
 }
 
 // ── UTILITIES ─────────────────────────────────────────────────

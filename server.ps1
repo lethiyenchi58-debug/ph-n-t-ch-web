@@ -1,4 +1,7 @@
-$port = 8080
+param(
+    [int]$port = 8080
+)
+
 $listener = New-Object System.Net.HttpListener
 $listener.Prefixes.Add("http://localhost:$port/")
 
@@ -12,6 +15,11 @@ try {
             $context = $listener.GetContext()
             $request = $context.Request
             $response = $context.Response
+
+            # Disable cache for local dev so changes show immediately
+            $response.AddHeader("Cache-Control", "no-cache, no-store, must-revalidate")
+            $response.AddHeader("Pragma", "no-cache")
+            $response.AddHeader("Expires", "0")
 
             $rawPath = [System.Uri]::UnescapeDataString($request.Url.LocalPath.TrimStart('/'))
             if ([string]::IsNullOrWhiteSpace($rawPath)) {
