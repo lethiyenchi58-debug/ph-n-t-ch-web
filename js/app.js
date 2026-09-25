@@ -58,12 +58,27 @@ function applyConfig() {
   document.getElementById("footer-address").textContent =
     cfg.shopAddress || "173 Vạn Phúc - Hà Đông, Hà Nội, Việt Nam";
   const footerPhone = document.getElementById("footer-phone");
-  if (footerPhone) { footerPhone.textContent = `📱 ${formatPhone(cfg.shopPhone || zalo)}`; footerPhone.href = `tel:${cfg.shopPhone || zalo}`; }
+  const footerPhoneText = document.getElementById("footer-phone-text");
+  if (footerPhone) footerPhone.href = `tel:${cfg.shopPhone || zalo}`;
+  if (footerPhoneText) {
+    footerPhoneText.textContent = formatPhone(cfg.shopPhone || zalo);
+  } else if (footerPhone) {
+    footerPhone.textContent = `📱 ${formatPhone(cfg.shopPhone || zalo)}`;
+  }
   const footerPhoneContact = document.getElementById("footer-phone-contact");
   if (footerPhoneContact) { footerPhoneContact.textContent = formatPhone(cfg.shopPhone || zalo); footerPhoneContact.href = `tel:${cfg.shopPhone || zalo}`; }
 
   const footerZaloLink = document.getElementById("footer-zalo-link");
-  if (footerZaloLink) { footerZaloLink.textContent = `💬 Zalo: ${formatPhone(zalo)}`; footerZaloLink.href = zaloUrl; footerZaloLink.target = "_blank"; }
+  const footerZaloLinkText = document.getElementById("footer-zalo-link-text");
+  if (footerZaloLink) {
+    footerZaloLink.href = zaloUrl;
+    footerZaloLink.target = "_blank";
+  }
+  if (footerZaloLinkText) {
+    footerZaloLinkText.textContent = `Zalo: ${formatPhone(zalo)}`;
+  } else if (footerZaloLink) {
+    footerZaloLink.textContent = `💬 Zalo: ${formatPhone(zalo)}`;
+  }
   const footerZaloContact = document.getElementById("footer-zalo-contact");
   if (footerZaloContact) { footerZaloContact.textContent = `Zalo: ${formatPhone(zalo)}`; footerZaloContact.href = zaloUrl; footerZaloContact.target = "_blank"; }
 
