@@ -201,6 +201,18 @@ const MITU_DEFAULT_CAKES = [
   }
 ];
 
+// Bài đăng TikTok hiện ở mục "Chúng tôi trên TikTok".
+// type "video" mở trình phát ngay trên trang; "photo" mở sang TikTok.
+// Ảnh bìa lưu sẵn trong images/tiktok/<id>.jpg (link ảnh của TikTok hết hạn sau vài tháng).
+const MITU_TIKTOK_POSTS = [
+  { id: "7558702509410241799", type: "video", caption: "Bánh kem mini + hộp trong xinh iu chỉ từ 99k" },
+  { id: "7686048955121208583", type: "video", caption: "Bánh troll cho hội sinh nhật tháng 9" },
+  { id: "7676022057540472071", type: "video", caption: "Bánh kem nem chua Thanh Hoá" },
+  { id: "7654224986655182088", type: "photo", caption: "Chúc mừng sinh nhật sếp Đạt – phòng KD1" },
+  { id: "7630535484929789205", type: "photo", caption: "Bánh sinh nhật bé Sóc 2 tuổi" },
+  { id: "7571740859369082132", type: "video", caption: "Bánh chim cánh cụt đội mũ tiệc" },
+];
+
 const MITU_DEFAULT_FEEDBACKS = [
   {
     id: "fb-1",

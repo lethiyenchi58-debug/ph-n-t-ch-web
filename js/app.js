@@ -30,6 +30,7 @@ document.addEventListener("DOMContentLoaded", () => {
   initModal();
   renderFeedbackSlider();
   initFeedbackLightbox();
+  initTiktok();
   initSmoothScroll();
   buildDrips();
   initReveals();
@@ -1209,6 +1210,120 @@ function initFeedbackLightbox() {
     if (e.key === "Escape") closeFeedbackLightbox();
     else if (e.key === "ArrowLeft") openFeedbackLightbox(currentFeedbackLightboxIndex - 1);
     else if (e.key === "ArrowRight") openFeedbackLightbox(currentFeedbackLightboxIndex + 1);
+  });
+}
+
+// ── Chúng tôi trên TikTok: băng chuyền thẻ giữa nổi bật + modal phát video ──
+function initTiktok() {
+  const stage = document.getElementById("ttStage");
+  const posts = typeof MITU_TIKTOK_POSTS !== "undefined" ? MITU_TIKTOK_POSTS : [];
+  if (!stage || !posts.length) return;
+
+  const dotsWrap = document.getElementById("ttDots");
+  const n = posts.length;
+  let active = Math.min(1, n - 1);
+
+  const postUrl = p => `https://www.tiktok.com/@tiembanhmitu/${p.type}/${p.id}`;
+  const playIcon = `<svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15a1 1 0 0 0 1.5.86l12.5-7.5a1 1 0 0 0 0-1.72L8.5 3.64A1 1 0 0 0 7 4.5z"/></svg>`;
+  const photoIcon = `<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="14" height="14" rx="2"/><path d="M7 3h12a2 2 0 0 1 2 2v12"/><path d="M3 15l4-4 4 4 2-2 4 4"/></svg>`;
+
+  const cards = posts.map((p, i) => {
+    const card = document.createElement("div");
+    card.className = "tt-card" + (p.type === "photo" ? " is-photo" : "");
+    card.setAttribute("role", "button");
+    card.setAttribute("aria-label", `${p.type === "photo" ? "Xem ảnh" : "Xem video"}: ${p.caption}`);
+    card.innerHTML = `
+      <img src="images/tiktok/${p.id}.jpg" alt="${escHtml(p.caption)}" loading="lazy" draggable="false" />
+      <span class="tt-badge">${p.type === "photo" ? "Ảnh" : "Video"} · TikTok</span>
+      <span class="tt-play">${p.type === "photo" ? photoIcon : playIcon}</span>
+      <span class="tt-caption">${escHtml(p.caption)}</span>`;
+    card.addEventListener("click", () => {
+      if (dragged) return;
+      if (i !== active) return go(i);
+      openTiktok(p);
+    });
+    card.addEventListener("keydown", e => {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); card.click(); }
+    });
+    stage.appendChild(card);
+    return card;
+  });
+
+  const dots = posts.map((p, i) => {
+    const dot = document.createElement("button");
+    dot.type = "button";
+    dot.className = "tt-dot";
+    dot.setAttribute("role", "tab");
+    dot.setAttribute("aria-label", `Video ${i + 1}`);
+    dot.addEventListener("click", () => go(i));
+    dotsWrap?.appendChild(dot);
+    return dot;
+  });
+
+  function go(i) {
+    active = (i + n) % n;
+    const half = Math.floor(n / 2);
+    cards.forEach((card, k) => {
+      // khoảng cách vòng tròn tới thẻ giữa, trong [-half, n-half-1]
+      const pos = ((k - active + n + half) % n) - half;
+      card.dataset.pos = pos;
+      card.style.setProperty("--pos", pos);
+      card.tabIndex = Math.abs(pos) <= 1 ? 0 : -1;
+    });
+    dots.forEach((d, k) => d.setAttribute("aria-selected", k === active ? "true" : "false"));
+  }
+
+  document.getElementById("ttPrev")?.addEventListener("click", () => go(active - 1));
+  document.getElementById("ttNext")?.addEventListener("click", () => go(active + 1));
+
+  // Vuốt ngang trên điện thoại
+  let startX = null, dragged = false;
+  stage.addEventListener("pointerdown", e => { startX = e.clientX; dragged = false; });
+  stage.addEventListener("pointermove", e => {
+    if (startX !== null && Math.abs(e.clientX - startX) > 10) dragged = true;
+  });
+  stage.addEventListener("pointerup", e => {
+    if (startX === null) return;
+    const dx = e.clientX - startX;
+    startX = null;
+    if (Math.abs(dx) > 40) go(active + (dx < 0 ? 1 : -1));
+    setTimeout(() => { dragged = false; }, 0);
+  });
+  stage.addEventListener("pointercancel", () => { startX = null; dragged = false; });
+
+  go(active);
+
+  // Modal phát video
+  const modal = document.getElementById("ttModal");
+  const frame = document.getElementById("ttModalFrame");
+  const link = document.getElementById("ttModalLink");
+
+  function openTiktok(p) {
+    if (p.type !== "video" || !modal) {
+      window.open(postUrl(p), "_blank", "noopener");
+      return;
+    }
+    frame.innerHTML = `<iframe src="https://www.tiktok.com/player/v1/${p.id}?autoplay=1&music_info=1&description=1&rel=0" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowfullscreen title="${escHtml(p.caption)}"></iframe>`;
+    link.href = postUrl(p);
+    modal.classList.add("active");
+    modal.setAttribute("aria-hidden", "false");
+    document.body.style.overflow = "hidden";
+    document.getElementById("ttModalClose")?.focus();
+  }
+
+  function closeTiktok() {
+    if (!modal?.classList.contains("active")) return;
+    modal.classList.remove("active");
+    modal.setAttribute("aria-hidden", "true");
+    document.body.style.overflow = "";
+    setTimeout(() => { frame.innerHTML = ""; }, 300); // dừng video
+    cards[active]?.focus();
+  }
+
+  document.getElementById("ttModalClose")?.addEventListener("click", closeTiktok);
+  document.getElementById("ttModalBackdrop")?.addEventListener("click", closeTiktok);
+  document.addEventListener("keydown", e => {
+    if (e.key === "Escape") closeTiktok();
   });
 }
 

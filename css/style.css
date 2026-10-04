@@ -1589,6 +1589,195 @@ input { font-family: inherit; }
 }
 .hero-frosting svg { display: block; width: 100%; height: 100%; }
 
+/* ============================================================
+   TIKTOK – băng chuyền: thẻ giữa to & nổi, hai bên lùi lại
+   ============================================================ */
+.tiktok-section { background: var(--butter); position: relative; overflow: hidden; }
+.tiktok-section .section-title { margin-bottom: 8px; }
+
+.tt-carousel {
+  --card-w: min(68vw, 300px);
+  --step: calc(var(--card-w) * .86);
+  position: relative;
+  margin: 18px calc(var(--gutter) * -1) 0;
+  touch-action: pan-y;
+}
+.tt-stage {
+  position: relative;
+  height: calc(var(--card-w) * 13 / 9 * 1.08 + 48px);
+}
+.tt-card {
+  --pos: 0;
+  position: absolute; left: 50%; top: 50%;
+  width: var(--card-w);
+  aspect-ratio: 9 / 13;
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--cocoa);
+  box-shadow: 0 10px 24px -14px rgba(43, 23, 14, .5);
+  cursor: pointer;
+  transform: translate(-50%, -50%) translateX(calc(var(--pos) * var(--step))) scale(.8);
+  opacity: 0;
+  pointer-events: none;
+  transition: transform .6s var(--ease), opacity .45s var(--ease), box-shadow .6s var(--ease), filter .6s var(--ease);
+  -webkit-tap-highlight-color: transparent;
+}
+.tt-card[data-pos="-1"],
+.tt-card[data-pos="1"] { opacity: 1; pointer-events: auto; filter: saturate(.85) brightness(.92); z-index: 1; }
+.tt-card[data-pos="0"] {
+  opacity: 1; pointer-events: auto; z-index: 2;
+  transform: translate(-50%, -50%) scale(1.08);
+  box-shadow: 0 28px 50px -20px rgba(43, 23, 14, .55);
+}
+.tt-card img { width: 100%; height: 100%; object-fit: cover; object-position: center 30%; display: block; }
+/* Ảnh dạng "photo" của TikTok có viền xám trên/dưới – phóng nhẹ để cắt bỏ */
+.tt-card.is-photo img { transform: scale(1.22); }
+
+/* Lớp phủ: đáy tối để đọc chữ */
+.tt-card::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(180deg, rgba(43, 23, 14, 0) 55%, rgba(43, 23, 14, .78) 100%);
+  pointer-events: none;
+}
+.tt-play {
+  position: absolute; left: 50%; top: 46%; z-index: 2;
+  width: 64px; height: 64px;
+  margin: -32px 0 0 -32px;
+  border-radius: 50%;
+  border: 2.5px solid rgba(255, 255, 255, .95);
+  background: rgba(43, 23, 14, .18);
+  -webkit-backdrop-filter: blur(3px);
+          backdrop-filter: blur(3px);
+  display: grid; place-items: center;
+  color: var(--white);
+  transition: transform .4s var(--ease), background .3s, color .3s, border-color .3s;
+}
+.tt-play svg { margin-left: 4px; }
+.tt-card[data-pos="0"] .tt-play { width: 76px; height: 76px; margin: -38px 0 0 -38px; }
+.tt-card[data-pos="0"] .tt-play::before {
+  content: '';
+  position: absolute; inset: -2.5px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, .8);
+  animation: tt-ping 2.2s ease-out infinite;
+}
+@keyframes tt-ping {
+  0%   { transform: scale(1);   opacity: .8; }
+  80%, 100% { transform: scale(1.5); opacity: 0; }
+}
+.tt-badge {
+  position: absolute; top: 10px; left: 10px; z-index: 2;
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: rgba(43, 23, 14, .55);
+  -webkit-backdrop-filter: blur(6px);
+          backdrop-filter: blur(6px);
+  color: var(--white);
+  font-size: 11.5px; font-weight: 700;
+}
+.tt-caption {
+  position: absolute; left: 12px; right: 12px; bottom: 12px; z-index: 2;
+  color: var(--white);
+  font-family: var(--font-display);
+  font-size: 15px; font-weight: 700; line-height: 1.25;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, .35);
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity .4s var(--ease) .15s, transform .4s var(--ease) .15s;
+}
+.tt-card[data-pos="0"] .tt-caption { opacity: 1; transform: none; }
+
+@media (hover: hover) and (pointer: fine) {
+  .tt-card[data-pos="0"]:hover .tt-play { transform: scale(1.1); background: var(--marigold); border-color: var(--marigold); color: var(--cocoa); }
+  .tt-card[data-pos="-1"]:hover,
+  .tt-card[data-pos="1"]:hover { filter: none; }
+}
+.tt-card:focus-visible { outline: 3px solid var(--marigold); outline-offset: 3px; }
+
+.tt-arrow {
+  position: absolute; top: 50%; z-index: 3;
+  width: 48px; height: 48px;
+  margin-top: -24px;
+  border-radius: 50%;
+  border: none;
+  background: var(--white);
+  color: var(--cocoa);
+  box-shadow: 0 6px 18px -6px rgba(43, 23, 14, .35);
+  display: grid; place-items: center;
+  cursor: pointer;
+  transition: background .25s, color .25s, transform .25s var(--ease);
+}
+.tt-arrow:hover { background: var(--cocoa); color: var(--marigold); }
+.tt-arrow:active { transform: scale(.92); }
+.tt-prev { left: 8px; }
+.tt-next { right: 8px; }
+
+.tt-dots { display: flex; justify-content: center; gap: 6px; margin-top: 10px; }
+.tt-dot {
+  width: 8px; height: 8px;
+  padding: 0; border: none;
+  border-radius: 999px;
+  background: rgba(43, 23, 14, .2);
+  cursor: pointer;
+  transition: width .35s var(--ease), background .35s;
+}
+.tt-dot[aria-selected="true"] { width: 24px; background: var(--cocoa); }
+
+.tt-follow { display: flex; justify-content: center; margin-top: 24px; }
+.btn-tiktok { --fill: var(--marigold); --fill-text: var(--cocoa); background: var(--cocoa); color: var(--white); gap: 8px; }
+
+/* Modal xem video */
+.tt-modal {
+  position: fixed; inset: 0; z-index: 1000;
+  display: grid; place-items: center;
+  padding: 16px;
+  opacity: 0; visibility: hidden;
+  transition: opacity .3s var(--ease), visibility 0s .3s;
+}
+.tt-modal.active { opacity: 1; visibility: visible; transition: opacity .3s var(--ease); }
+.tt-modal-backdrop { position: absolute; inset: 0; background: rgba(20, 10, 5, .82); }
+.tt-modal-box {
+  position: relative;
+  width: min(100%, 360px, calc((100dvh - 110px) * 9 / 16));
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  transform: translateY(16px) scale(.97);
+  transition: transform .35s var(--ease);
+}
+.tt-modal.active .tt-modal-box { transform: none; }
+.tt-modal-frame {
+  width: 100%;
+  aspect-ratio: 9 / 16;
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: #000;
+}
+.tt-modal-frame iframe { width: 100%; height: 100%; border: 0; display: block; }
+.tt-modal-close {
+  position: absolute; top: -8px; right: -8px; z-index: 2;
+  width: 40px; height: 40px;
+  border-radius: 50%; border: none;
+  background: var(--white); color: var(--cocoa);
+  display: grid; place-items: center;
+  cursor: pointer;
+  box-shadow: var(--shadow);
+}
+.tt-modal-link { color: var(--marigold); font-weight: 700; font-size: 14px; }
+
+@media (min-width: 768px) {
+  .tt-carousel { --card-w: 300px; --step: 380px; margin: 28px 0 0; }
+  .tt-prev { left: 0; }
+  .tt-next { right: 0; }
+}
+@media (min-width: 1100px) {
+  .tt-carousel { --card-w: 340px; --step: 460px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tt-card, .tt-caption { transition-duration: .01s; }
+  .tt-card[data-pos="0"] .tt-play::before { animation: none; }
+}
+
 /* Kem chảy: giọt kem do app.js vẽ, màu = màu phần phía trên */
 .drip {
   position: absolute; top: -1px; left: 0; right: 0; z-index: 1;
@@ -1610,7 +1799,8 @@ input { font-family: inherit; }
 .catalog-section,
 .bestseller-section,
 .custom-section,
-.about-section { padding-top: calc(56px + var(--drip-h) * .5); }
+.about-section,
+.tiktok-section { padding-top: calc(56px + var(--drip-h) * .5); }
 .catalog-section,
 .bestseller-section { position: relative; }
 .footer { position: relative; }
@@ -1619,7 +1809,8 @@ input { font-family: inherit; }
   .catalog-section,
   .bestseller-section,
   .custom-section,
-  .about-section { padding-top: calc(80px + var(--drip-h) * .5); }
+  .about-section,
+  .tiktok-section { padding-top: calc(80px + var(--drip-h) * .5); }
   .footer-main { padding-top: calc(60px + var(--drip-h) * .5); }
 }
 
