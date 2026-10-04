@@ -2,416 +2,714 @@
 <html lang="vi">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="robots" content="noindex" />
   <title>Admin – Tiệm bánh Mitu</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@600;700;800&family=Montserrat:wght@300;400;500;600;700;800&family=Quicksand:wght@600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Be+Vietnam+Pro:wght@400;500;600;700&family=Pangolin&display=swap" rel="stylesheet" />
   <link rel="icon" type="image/png" href="images/logo.png" />
 
   <style>
-    /* ── Admin CSS ── */
+    /* =========================================================
+       ADMIN – Tiệm bánh Mitu
+       Cùng hệ màu với trang khách (vàng ruy băng, đỏ áo đầu bếp, nâu socola)
+       nhưng tiết chế hơn: đây là nơi làm việc của chủ tiệm.
+       Mobile-first: < 1024px dùng thanh tab dưới, >= 1024px dùng thanh bên.
+       ========================================================= */
     :root {
-      --primary: #d97706; --primary-dark: #b45309; --primary-light: #fef08a;
-      --secondary: #5c3016;
-      --accent: #fef3c7; --bg: #fffcf8; --bg-dark: #fef7ea;
-      --text: #3c2212; --text-light: #7c5339; --white: #ffffff;
-      --border: #fae5cc; --shadow: rgba(92,48,22,.12);
-      --success: #22c55e; --danger: #ef4444; --warning: #f59e0b; --info: #3b82f6;
-      --sidebar-w: 250px;
-      --font-display: 'Comfortaa', 'Quicksand', -apple-system, BlinkMacSystemFont, sans-serif;
-      --font-body: 'Montserrat', sans-serif;
-      --radius: 14px; --radius-sm: 8px;
-      --transition: all .3s ease;
+      --marigold:      #F4A81D;
+      --marigold-deep: #C77C00;
+      --butter:        #FFF3D1;
+      --cherry:        #D63A2A;
+      --cocoa:         #2B170E;
+      --cocoa-soft:    #6B4A39;
+      --icing:         #FFFDF8;
+      --paper:         #F7F2EA; /* nền vùng làm việc */
+      --white:         #FFFFFF;
+      --line:          #EADCC6;
+      --zalo:          #0068FF;
+      --success:       #1F9D55;
+      --danger:        #C8321F;
+
+      /* tên cũ – admin.js còn dùng trong inline style */
+      --text: var(--cocoa);
+      --text-light: var(--cocoa-soft);
+      --secondary: var(--cocoa);
+      --primary: var(--marigold);
+      --border: var(--line);
+      --bg: var(--icing);
+      --bg-dark: var(--butter);
+
+      --font-display: 'Baloo 2', 'Be Vietnam Pro', system-ui, sans-serif;
+      --font-body: 'Be Vietnam Pro', system-ui, -apple-system, 'Segoe UI', sans-serif;
+      --font-hand: 'Pangolin', 'Be Vietnam Pro', cursive;
+
+      --radius: 16px; --radius-sm: 10px;
+      --shadow-sm: 0 1px 3px rgba(43, 23, 14, .08);
+      --shadow: 0 12px 32px rgba(43, 23, 14, .14);
+      --ease: cubic-bezier(.22, 1, .36, 1);
+
+      --gutter: 14px;
+      --tabbar-h: 64px;
+      --topbar-h: 56px;
+      --sidebar-w: 248px;
     }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: var(--font-body); background: var(--bg); color: var(--text); }
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+      font-family: var(--font-body);
+      background: var(--paper);
+      color: var(--cocoa);
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
     a { text-decoration: none; color: inherit; }
-    button { font-family: var(--font-body); cursor: pointer; }
-    img { max-width: 100%; }
+    button { font-family: inherit; cursor: pointer; color: inherit; }
+    img { max-width: 100%; display: block; }
+    input, select, textarea { font-family: inherit; font-size: 16px; color: var(--cocoa); }
+    :focus-visible { outline: 3px solid var(--marigold); outline-offset: 2px; }
 
-    /* ── Login Screen ── */
+    /* ── Form fields (dùng chung) ── */
+    .field { margin-bottom: 14px; }
+    .field-label,
+    .settings-form label,
+    .login-form label {
+      display: block;
+      font-size: 13.5px; font-weight: 600;
+      color: var(--cocoa);
+      margin-bottom: 6px;
+    }
+    .field-input,
+    .settings-form input,
+    .settings-form textarea,
+    .login-form input {
+      width: 100%;
+      min-height: 48px;
+      padding: 11px 14px;
+      border: 1.5px solid var(--line);
+      border-radius: var(--radius-sm);
+      background: var(--white);
+      outline: none;
+      transition: border-color .2s, box-shadow .2s;
+    }
+    .field-input:focus,
+    .settings-form input:focus,
+    .settings-form textarea:focus,
+    .login-form input:focus {
+      border-color: var(--marigold);
+      box-shadow: 0 0 0 4px rgba(244, 168, 29, .2);
+    }
+    textarea.field-input, .settings-form textarea { min-height: 88px; resize: vertical; line-height: 1.5; }
+    select.field-input {
+      appearance: none; -webkit-appearance: none;
+      padding-right: 40px;
+      background: var(--white) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%232B170E' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat right 14px center;
+    }
+    .field-row { display: grid; grid-template-columns: 1fr; gap: 0 14px; }
+    .form-hint { font-size: 12.5px; color: var(--cocoa-soft); margin-top: 5px; }
+
+    /* ── Buttons ── */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      min-height: 44px;
+      padding: 10px 18px;
+      border-radius: 999px;
+      border: 1.5px solid transparent;
+      font-size: 14px; font-weight: 700;
+      line-height: 1.2;
+      white-space: nowrap;
+      transition: background .2s, border-color .2s, transform .15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn:active { transform: translateY(1px); }
+    .btn-primary { background: var(--marigold); color: var(--cocoa); border-color: var(--cocoa); box-shadow: 0 3px 0 var(--cocoa); }
+    .btn-primary:hover { background: #FFB935; }
+    .btn-primary:active { box-shadow: 0 1px 0 var(--cocoa); transform: translateY(2px); }
+    .btn-secondary { background: var(--white); color: var(--cocoa); border-color: var(--line); }
+    .btn-secondary:hover { border-color: var(--cocoa); }
+    .btn-danger { background: var(--white); color: var(--danger); border-color: rgba(200, 50, 31, .35); }
+    .btn-danger:hover { background: var(--danger); color: var(--white); border-color: var(--danger); }
+    .btn-success { background: var(--white); color: var(--success); border-color: rgba(31, 157, 85, .35); }
+    .btn-sm { min-height: 38px; padding: 6px 12px; font-size: 13px; }
+
+    /* ============================================================
+       LOGIN
+       ============================================================ */
     .login-screen {
-      min-height: 100vh;
-      background: linear-gradient(135deg, #241105 0%, #4a210a 50%, #78350f 100%);
+      min-height: 100vh; min-height: 100dvh;
+      background: var(--marigold);
       display: flex; align-items: center; justify-content: center;
-      padding: 20px;
+      padding: 24px var(--gutter);
     }
     .login-card {
-      background: white; border-radius: 22px;
-      padding: 44px 40px; max-width: 400px; width: 100%;
-      box-shadow: 0 24px 70px rgba(0,0,0,.35);
+      width: 100%; max-width: 400px;
+      background: var(--icing);
+      border-radius: 24px;
+      border: 2px solid var(--cocoa);
+      box-shadow: 0 6px 0 var(--cocoa);
+      padding: 32px 22px 24px;
       text-align: center;
     }
     .login-icon {
-      width: 72px; height: 72px; margin: 0 auto 16px;
-      border-radius: 50%; border: 3px solid #fde68a;
-      box-shadow: 0 6px 18px rgba(217,119,6,.25);
-      overflow: hidden; background: white;
+      width: 76px; height: 76px; margin: 0 auto 12px;
+      border-radius: 50%;
+      border: 2px solid var(--marigold);
+      background: var(--white);
+      overflow: hidden;
     }
     .login-icon img { width: 100%; height: 100%; object-fit: contain; }
-    .login-title { font-family: var(--font-display); font-size: 28px; color: var(--secondary); margin-bottom: 6px; font-weight: 700; }
-    .login-sub { font-size: 13px; color: var(--text-light); margin-bottom: 28px; }
-    .login-form .form-group { text-align: left; margin-bottom: 16px; }
-    .login-form label { display: block; font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
-    .login-form input {
-      width: 100%; padding: 12px 16px;
-      border: 1.5px solid var(--border); border-radius: var(--radius-sm);
-      font-size: 14px; font-family: var(--font-body);
-      color: var(--text); background: var(--bg);
-      outline: none; transition: var(--transition);
+    .login-hello { font-family: var(--font-hand); font-size: 19px; color: var(--cherry); line-height: 1.2; }
+    .login-title { font-family: var(--font-display); font-size: 32px; font-weight: 800; line-height: 1.1; margin-bottom: 4px; }
+    .login-sub { font-size: 14px; color: var(--cocoa-soft); margin-bottom: 24px; }
+    .login-form { text-align: left; }
+    .login-form .form-group { margin-bottom: 14px; }
+    .login-error {
+      display: none;
+      background: #FDECEA; color: var(--danger);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+      font-size: 13.5px; font-weight: 600;
+      margin-bottom: 12px;
     }
-    .login-form input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(217,119,6,.15); background: white; }
-    .login-error { color: var(--danger); font-size: 13px; font-weight: 600; margin-bottom: 12px; display: none; }
     .login-error.show { display: block; }
     .btn-login {
-      width: 100%; padding: 14px;
-      background: linear-gradient(135deg, #d97706, #b45309); color: white;
-      border: none; border-radius: 25px;
-      font-size: 15px; font-weight: 700;
-      cursor: pointer; transition: var(--transition);
-      box-shadow: 0 6px 20px rgba(217,119,6,.35);
-      margin-top: 8px;
+      width: 100%; min-height: 52px;
+      margin-top: 6px;
+      border-radius: 999px;
+      border: 2px solid var(--cocoa);
+      background: var(--cocoa); color: var(--marigold);
+      font-size: 16px; font-weight: 700;
+      transition: background .2s;
     }
-    .btn-login:hover { background: linear-gradient(135deg, #b45309, #92400e); transform: translateY(-2px); }
-    .back-to-site { display: block; margin-top: 20px; font-size: 13px; color: var(--text-light); }
-    .back-to-site:hover { color: var(--primary); }
+    .btn-login:hover { background: #4A2A1A; }
+    .back-to-site { display: inline-flex; align-items: center; min-height: 44px; margin-top: 10px; font-size: 14px; color: var(--cocoa-soft); }
+    .back-to-site:hover { color: var(--cocoa); }
 
-    /* ── Admin Layout ── */
-    .admin-layout { display: flex; min-height: 100vh; }
+    /* ============================================================
+       LAYOUT
+       ============================================================ */
+    .admin-layout { min-height: 100vh; }
     .admin-layout.hidden { display: none; }
-
-    /* Sidebar */
-    .sidebar {
-      width: var(--sidebar-w); background: #1a0b03;
-      color: white; display: flex; flex-direction: column;
-      position: fixed; top: 0; left: 0; height: 100vh;
-      overflow-y: auto; z-index: 100;
-      transition: transform .3s ease;
-    }
-    .sidebar-logo {
-      padding: 20px;
-      border-bottom: 1px solid rgba(255,255,255,.08);
-      display: flex; align-items: center; gap: 12px;
-    }
-    .sidebar-logo-img {
-      width: 42px; height: 42px; border-radius: 50%;
-      border: 2px solid #f59e0b; background: white; padding: 2px;
-      object-fit: contain; flex-shrink: 0;
-    }
-    .sidebar-logo-text { font-family: var(--font-display); font-size: 18px; color: #fef3c7; font-weight: 700; }
-    .sidebar-logo-sub { font-size: 10.5px; color: rgba(255,255,255,.5); letter-spacing: 1.5px; text-transform: uppercase; margin-top: 2px; }
-
-    .sidebar-nav { padding: 20px 0; flex: 1; }
-    .nav-section-label {
-      font-size: 10px; font-weight: 700; color: rgba(255,255,255,.35);
-      text-transform: uppercase; letter-spacing: 2px;
-      padding: 8px 20px 6px; margin-top: 8px;
-    }
-    .sidebar-link {
-      display: flex; align-items: center; gap: 12px;
-      padding: 12px 20px; color: rgba(255,255,255,.7);
-      font-size: 14px; font-weight: 500;
-      transition: var(--transition); cursor: pointer;
-      border-left: 3px solid transparent;
-    }
-    .sidebar-link:hover { color: #fef08a; background: rgba(255,255,255,.06); }
-    .sidebar-link.active { color: white; background: rgba(217,119,6,.22); border-left-color: var(--primary); }
-    .sidebar-link .s-icon { font-size: 18px; width: 22px; text-align: center; }
-
-    .sidebar-footer {
-      padding: 16px 20px;
-      border-top: 1px solid rgba(255,255,255,.08);
-    }
-    .btn-logout {
-      width: 100%; padding: 10px;
-      background: rgba(239,68,68,.15); color: #f87171;
-      border: 1px solid rgba(239,68,68,.3); border-radius: 8px;
-      font-size: 13px; font-weight: 600;
-      cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
-      transition: var(--transition);
-    }
-    .btn-logout:hover { background: rgba(239,68,68,.3); }
-
-    /* Main content */
     .admin-main {
-      margin-left: var(--sidebar-w);
-      flex: 1; display: flex; flex-direction: column; min-height: 100vh;
+      min-height: 100vh;
+      padding-bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px));
     }
+
+    /* Sidebar → thanh tab dưới trên điện thoại */
+    .sidebar {
+      position: fixed; left: 0; right: 0; bottom: 0;
+      z-index: 500;
+      background: var(--cocoa);
+      color: var(--white);
+      padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
+    .sidebar-logo,
+    .nav-section-label,
+    .sidebar-footer,
+    .sidebar-close-btn { display: none; }
+    .sidebar-nav { display: flex; height: var(--tabbar-h); }
+    .sidebar-link {
+      position: relative;
+      flex: 1; min-width: 0;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 3px;
+      font-size: 11px; font-weight: 600;
+      color: rgba(255, 255, 255, .62);
+      text-align: center; line-height: 1.15;
+      cursor: pointer;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .sidebar-link .s-icon { font-size: 20px; line-height: 1; }
+    .sidebar-link::before {
+      content: '';
+      position: absolute; top: 0; left: 25%; right: 25%;
+      height: 3px; border-radius: 0 0 3px 3px;
+      background: var(--marigold);
+      transform: scaleX(0);
+      transition: transform .25s var(--ease);
+    }
+    .sidebar-link.active { color: var(--white); }
+    .sidebar-link.active::before { transform: scaleX(1); }
+    .sidebar-overlay { display: none; }
 
     /* Top bar */
     .admin-topbar {
-      background: white; border-bottom: 1px solid var(--border);
-      padding: 16px 28px; display: flex; align-items: center;
-      justify-content: space-between; position: sticky; top: 0; z-index: 50;
+      position: sticky; top: 0; z-index: 50;
+      min-height: var(--topbar-h);
+      padding: 8px var(--gutter);
+      background: rgba(255, 253, 248, .95);
+      -webkit-backdrop-filter: blur(10px);
+              backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--line);
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
     }
-    .topbar-title { font-size: 18px; font-weight: 700; color: var(--text); }
-    .topbar-date { font-size: 13px; color: var(--text-light); }
-    .topbar-admin { display: flex; align-items: center; gap: 10px; }
+    .topbar-left, .topbar-right { display: flex; align-items: center; gap: 10px; min-width: 0; }
+    .topbar-logo { width: 34px; height: 34px; border-radius: 50%; border: 2px solid var(--marigold); background: var(--white); object-fit: contain; flex-shrink: 0; }
+    .topbar-title {
+      font-family: var(--font-display);
+      font-size: 20px; font-weight: 800;
+      line-height: 1.1;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .topbar-date { display: none; font-size: 13.5px; color: var(--cocoa-soft); }
+    .topbar-admin { display: none; align-items: center; gap: 8px; }
     .topbar-avatar {
-      width: 36px; height: 36px; border-radius: 50%;
-      background: var(--primary); color: white;
+      width: 34px; height: 34px; border-radius: 50%;
+      background: var(--cocoa); color: var(--marigold);
       display: flex; align-items: center; justify-content: center;
-      font-size: 16px;
+      font-size: 14px; font-weight: 700;
     }
     .topbar-name { font-size: 14px; font-weight: 600; }
-    .hamburger-sidebar {
-      display: none; padding: 4px; cursor: pointer;
-      flex-direction: column; gap: 4px;
+    .topbar-logout {
+      display: inline-flex; align-items: center; gap: 6px;
+      min-height: 40px; padding: 6px 12px;
+      border-radius: 999px;
+      border: 1.5px solid var(--line);
+      background: var(--white);
+      font-size: 13px; font-weight: 600;
+      color: var(--cocoa-soft);
     }
-    .hamburger-sidebar span { width: 22px; height: 2px; background: var(--text); border-radius: 2px; }
+    .topbar-logout:hover { color: var(--danger); border-color: currentColor; }
+    .hamburger-sidebar { display: none; }
 
     /* Panels */
-    .admin-panel { padding: 28px; display: none; }
+    .admin-panel { display: none; padding: 18px var(--gutter) 28px; max-width: 1240px; }
     .admin-panel.active { display: block; }
-
-    /* Panel header */
-    .panel-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; flex-wrap: wrap; gap: 12px; }
-    .panel-title { font-size: 22px; font-weight: 700; color: var(--text); }
-
-    /* Buttons */
-    .btn {
-      display: inline-flex; align-items: center; gap: 7px;
-      padding: 10px 20px; border-radius: 20px; font-size: 13px;
-      font-weight: 700; border: none; cursor: pointer;
-      transition: var(--transition); font-family: var(--font-body);
+    .panel-header {
+      display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 16px;
     }
-    .btn-primary { background: var(--primary); color: white; box-shadow: 0 4px 14px rgba(212,115,106,.3); }
-    .btn-primary:hover { background: var(--primary-dark); transform: translateY(-1px); }
-    .btn-secondary { background: var(--bg-dark); color: var(--text); border: 1.5px solid var(--border); }
-    .btn-secondary:hover { background: var(--accent); }
-    .btn-danger { background: rgba(239,68,68,.1); color: #dc2626; border: 1px solid rgba(239,68,68,.2); }
-    .btn-danger:hover { background: rgba(239,68,68,.2); }
-    .btn-success { background: rgba(34,197,94,.1); color: #16a34a; border: 1px solid rgba(34,197,94,.2); }
-    .btn-success:hover { background: rgba(34,197,94,.2); }
-    .btn-sm { padding: 7px 14px; font-size: 12px; }
+    .panel-title { font-family: var(--font-display); font-size: 26px; font-weight: 800; line-height: 1.1; }
+    .panel-desc { font-size: 14px; color: var(--cocoa-soft); margin-top: 4px; max-width: 60ch; }
+    .panel-header > .btn { width: 100%; }
+    .panel-actions { display: flex; gap: 10px; width: 100%; }
+    .panel-actions .btn { flex: 1; }
 
-    /* Search bar */
-    .search-filter { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
-    .search-input {
-      flex: 1; min-width: 200px;
-      padding: 10px 16px; border: 1.5px solid var(--border);
-      border-radius: 20px; font-size: 14px; font-family: var(--font-body);
-      color: var(--text); background: var(--bg); outline: none;
+    /* Thanh lưu ghim ở đáy (Menu hôm nay) */
+    .panel-actions-sticky {
+      position: fixed; left: 0; right: 0;
+      bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px));
+      z-index: 40;
+      padding: 10px var(--gutter);
+      background: rgba(255, 253, 248, .96);
+      -webkit-backdrop-filter: blur(10px);
+              backdrop-filter: blur(10px);
+      border-top: 1px solid var(--line);
     }
-    .search-input:focus { border-color: var(--primary); background: white; }
+    #panel-today { padding-bottom: 96px; }
+
+    /* Search */
+    .search-filter { display: grid; grid-template-columns: 1fr; gap: 10px; margin-bottom: 16px; }
+    .search-input, .search-select {
+      width: 100%; min-height: 48px;
+      padding: 10px 16px;
+      border: 1.5px solid var(--line);
+      border-radius: 999px;
+      background: var(--white);
+      outline: none;
+    }
+    .search-input { padding-left: 42px; background: var(--white) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%236B4A39' stroke-width='2.2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='M20 20l-3.5-3.5'/%3E%3C/svg%3E") no-repeat 16px center; }
     .search-select {
-      padding: 10px 16px; border: 1.5px solid var(--border);
-      border-radius: 20px; font-size: 13px; font-family: var(--font-body);
-      color: var(--text); background: var(--bg); outline: none;
+      appearance: none; -webkit-appearance: none;
+      padding-right: 40px;
+      background: var(--white) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%232B170E' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat right 16px center;
       cursor: pointer;
     }
+    .search-input:focus, .search-select:focus { border-color: var(--marigold); box-shadow: 0 0 0 4px rgba(244, 168, 29, .2); }
 
-    /* Inventory grid */
-    .inventory-grid {
-      display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-      gap: 18px;
-    }
+    /* Kho bánh */
+    .inventory-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
     .inv-card {
-      background: white; border-radius: var(--radius);
-      border: 1px solid var(--border);
-      overflow: hidden; transition: var(--transition);
+      background: var(--white);
+      border-radius: var(--radius);
+      border: 1px solid var(--line);
+      overflow: hidden;
+      display: flex; flex-direction: column;
     }
-    .inv-card:hover { box-shadow: 0 8px 24px var(--shadow); }
     .inv-card-img {
-      width: 100%; height: 150px;
-      background: var(--accent);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 55px; overflow: hidden;
       position: relative;
-    }
-    .inv-card-img img { width: 100%; height: 100%; object-fit: cover; position: absolute; inset: 0; }
-    .inv-card-body { padding: 12px 14px 14px; }
-    .inv-card-name { font-weight: 700; font-size: 14px; color: var(--text); margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .inv-card-price { font-size: 15px; font-weight: 800; color: var(--primary); margin-bottom: 4px; }
-    .inv-card-cat { font-size: 11px; background: var(--accent); color: var(--primary); padding: 2px 8px; border-radius: 10px; display: inline-block; font-weight: 600; }
-    .inv-card-actions { display: flex; gap: 6px; margin-top: 12px; }
-    .inv-card-actions button { flex: 1; }
-
-    /* Today panel */
-    .today-info-bar {
-      background: var(--accent); border: 1px solid var(--border);
-      border-radius: var(--radius-sm); padding: 14px 18px;
-      display: flex; align-items: center; gap: 10px;
-      margin-bottom: 20px; flex-wrap: wrap; gap: 12px;
-    }
-    .today-date-text { font-weight: 700; font-size: 14px; color: var(--text); }
-    .today-count-badge {
-      background: var(--primary); color: white;
-      padding: 4px 12px; border-radius: 15px;
-      font-size: 12px; font-weight: 700;
-    }
-    .today-select-grid {
-      display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-      gap: 14px;
-    }
-    .today-select-card {
-      background: white; border: 2px solid var(--border);
-      border-radius: var(--radius-sm); padding: 14px;
-      cursor: pointer; transition: var(--transition);
-      user-select: none;
-    }
-    .today-select-card.selected {
-      border-color: var(--primary);
-      background: rgba(212,115,106,.06);
-    }
-    .today-select-card:hover { border-color: var(--primary-light); }
-    .today-card-img {
-      width: 100%; height: 120px;
-      background: var(--accent); border-radius: 6px;
+      aspect-ratio: 1 / 1;
+      background: var(--butter);
       display: flex; align-items: center; justify-content: center;
-      font-size: 44px; margin-bottom: 10px;
-      overflow: hidden; position: relative;
+      font-size: 44px;
+      overflow: hidden;
+    }
+    .inv-card-img img, .today-card-img img { font-size: 12px; }
+    .inv-card-img img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: top center; }
+    .cake-img-placeholder { font-size: 44px; }
+    .inv-badge {
+      position: absolute; left: 0; bottom: 8px;
+      max-width: calc(100% - 10px);
+      background: var(--marigold); color: var(--cocoa);
+      font-size: 11px; font-weight: 700;
+      padding: 3px 14px 3px 8px;
+      clip-path: polygon(0 0, 100% 0, calc(100% - 7px) 50%, 100% 100%, 0 100%);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .inv-card-body { padding: 10px 10px 12px; display: flex; flex-direction: column; flex: 1; }
+    .inv-card-name {
+      font-family: var(--font-display);
+      font-size: 15px; font-weight: 700; line-height: 1.2;
+      margin-bottom: 4px;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+    }
+    .inv-card-price { font-family: var(--font-display); font-size: 17px; font-weight: 800; color: var(--cherry); line-height: 1.1; margin-bottom: 6px; }
+    .inv-card-cat {
+      align-self: flex-start;
+      font-size: 11.5px; font-weight: 600;
+      background: var(--butter); color: var(--cocoa-soft);
+      padding: 2px 9px; border-radius: 999px;
+    }
+    .inv-card-actions { display: flex; gap: 6px; margin-top: auto; padding-top: 10px; }
+    .inv-card-actions .btn { flex: 1; padding: 6px 8px; }
+    .inv-card-actions .btn-danger { flex: 0 0 44px; }
+    .inv-card-actions .btn-delete-fb { flex: 1; }
+
+    /* Menu hôm nay */
+    .today-info-bar {
+      display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px;
+      background: var(--white);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 12px 14px;
+      margin-bottom: 14px;
+      font-size: 14px;
+    }
+    .today-date-text { font-weight: 700; }
+    .today-count-badge {
+      background: var(--cocoa); color: var(--marigold);
+      padding: 3px 10px; border-radius: 999px;
+      font-size: 12.5px; font-weight: 700;
+    }
+    .today-hint { flex-basis: 100%; font-size: 13px; color: var(--cocoa-soft); }
+    .today-select-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .today-select-card {
+      background: var(--white);
+      border: 2px solid var(--line);
+      border-radius: var(--radius);
+      padding: 8px 8px 10px;
+      cursor: pointer;
+      user-select: none;
+      transition: border-color .15s, background .15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .today-select-card.selected { border-color: var(--cocoa); background: var(--butter); }
+    .today-card-img {
+      position: relative;
+      aspect-ratio: 1 / 1;
+      border-radius: 10px;
+      background: var(--butter);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 40px;
+      overflow: hidden;
+      margin-bottom: 8px;
     }
     .today-card-img img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    .today-select-card:not(.selected) .today-card-img img { filter: saturate(.75); opacity: .85; }
+    /* Ô tick luôn hiện để biết là chạm được */
     .today-card-check {
-      position: absolute; top: 6px; right: 6px;
-      width: 24px; height: 24px; border-radius: 50%;
-      background: var(--primary); color: white;
+      position: absolute; top: 8px; right: 8px;
+      width: 28px; height: 28px; border-radius: 8px;
+      background: rgba(255, 255, 255, .9);
+      border: 2px solid var(--cocoa);
+      color: transparent;
       display: flex; align-items: center; justify-content: center;
-      font-size: 13px; opacity: 0; transition: var(--transition);
+      font-size: 15px; font-weight: 800;
+      transition: background .15s, color .15s;
     }
-    .today-select-card.selected .today-card-check { opacity: 1; }
-    .today-card-name { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .today-card-price { font-size: 13px; font-weight: 800; color: var(--primary); }
+    .today-select-card.selected .today-card-check { background: var(--marigold); color: var(--cocoa); }
+    .today-card-name {
+      font-size: 13.5px; font-weight: 600; line-height: 1.25;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+      min-height: 2.5em;
+    }
+    .today-card-price { font-family: var(--font-display); font-size: 15px; font-weight: 800; color: var(--cherry); margin-top: 2px; }
 
-    /* Settings */
+    /* Cài đặt */
     .settings-card {
-      background: white; border-radius: var(--radius);
-      border: 1px solid var(--border);
-      padding: 24px 28px; margin-bottom: 20px;
+      background: var(--white);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 18px 16px;
+      margin-bottom: 14px;
+      max-width: 760px;
     }
-    .settings-card h3 { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 18px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
-    .settings-form .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-    .settings-form .form-group { margin-bottom: 16px; }
-    .settings-form label { display: block; font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
-    .settings-form input,
-    .settings-form textarea {
-      width: 100%; padding: 11px 14px;
-      border: 1.5px solid var(--border); border-radius: var(--radius-sm);
-      font-size: 14px; font-family: var(--font-body);
-      color: var(--text); background: var(--bg); outline: none; transition: var(--transition);
+    .settings-card h3 {
+      font-family: var(--font-display);
+      font-size: 19px; font-weight: 700;
+      margin-bottom: 14px; padding-bottom: 10px;
+      border-bottom: 1px dashed var(--line);
     }
-    .settings-form input:focus,
-    .settings-form textarea:focus { border-color: var(--primary); background: white; box-shadow: 0 0 0 3px rgba(212,115,106,.1); }
-    .settings-form textarea { min-height: 80px; resize: vertical; }
-    .form-hint { font-size: 12px; color: var(--text-light); margin-top: 4px; }
+    .settings-form .form-row { display: grid; grid-template-columns: 1fr; gap: 0 14px; }
+    .settings-form .form-group { margin-bottom: 14px; }
+    .settings-form .btn { width: 100%; }
+    .settings-card.danger { border-color: rgba(200, 50, 31, .35); }
+    .settings-card.danger h3 { color: var(--danger); }
+    .danger-actions { display: flex; flex-direction: column; gap: 10px; }
 
-    /* Modal */
+    /* ============================================================
+       MODAL – toàn màn hình trên điện thoại, nút lưu luôn ở đáy
+       ============================================================ */
     .modal-overlay {
-      position: fixed; inset: 0; background: rgba(0,0,0,.5);
-      z-index: 2000; display: flex; align-items: center; justify-content: center;
-      padding: 20px; opacity: 0; pointer-events: none; transition: opacity .3s ease;
+      position: fixed; inset: 0; z-index: 2000;
+      background: rgba(20, 10, 5, .5);
+      display: flex; align-items: flex-end; justify-content: center;
+      opacity: 0; pointer-events: none;
+      transition: opacity .25s ease;
     }
-    .modal-overlay.show { opacity: 1; pointer-events: all; }
+    .modal-overlay.show { opacity: 1; pointer-events: auto; }
     .a-modal {
-      background: white; border-radius: 18px;
-      padding: 30px; max-width: 520px; width: 100%;
-      position: relative; max-height: 90vh; overflow-y: auto;
-      transform: translateY(16px) scale(.97); transition: var(--transition);
+      position: relative;
+      width: 100%;
+      height: 100%; height: 100dvh;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      background: var(--icing);
+      padding: 0 var(--gutter);
+      transform: translateY(24px);
+      transition: transform .3s var(--ease);
     }
-    .modal-overlay.show .a-modal { transform: translateY(0) scale(1); }
-    .a-modal-title { font-size: 20px; font-weight: 700; color: var(--text); margin-bottom: 20px; padding-bottom: 14px; border-bottom: 1px solid var(--border); }
+    .modal-overlay.show .a-modal { transform: none; }
+    .a-modal-title {
+      position: sticky; top: 0; z-index: 3;
+      margin: 0 calc(var(--gutter) * -1) 16px;
+      padding: 14px 64px 14px var(--gutter);
+      background: var(--icing);
+      border-bottom: 1px solid var(--line);
+      font-family: var(--font-display);
+      font-size: 21px; font-weight: 800; line-height: 1.2;
+    }
     .modal-close-btn {
-      position: absolute; top: 12px; right: 12px;
-      width: 32px; height: 32px; border-radius: 50%;
-      border: none; background: var(--bg); cursor: pointer;
-      font-size: 20px; display: flex; align-items: center; justify-content: center;
-      color: var(--text-light); transition: var(--transition);
+      position: absolute; top: 8px; right: 10px; z-index: 4;
+      width: 44px; height: 44px; border-radius: 50%;
+      border: none; background: var(--butter);
+      font-size: 24px; line-height: 1;
+      display: flex; align-items: center; justify-content: center;
     }
-    .modal-close-btn:hover { background: var(--primary); color: white; }
+    .modal-close-btn:hover { background: var(--marigold); }
+    .modal-footer {
+      position: sticky; bottom: 0; z-index: 3;
+      display: flex; gap: 10px;
+      margin: 20px calc(var(--gutter) * -1) 0;
+      padding: 12px var(--gutter) calc(12px + env(safe-area-inset-bottom, 0px));
+      background: var(--icing);
+      border-top: 1px solid var(--line);
+    }
+    .modal-footer .btn { flex: 1; min-height: 50px; }
+    .modal-footer .btn-primary { flex: 2; }
 
-    /* Image upload */
+    /* Ảnh tải lên */
     .img-upload-area {
-      border: 2px dashed var(--border); border-radius: var(--radius-sm);
-      padding: 24px; text-align: center; cursor: pointer;
-      transition: var(--transition); background: var(--bg);
-      position: relative; overflow: hidden;
+      border: 2px dashed var(--line);
+      border-radius: var(--radius);
+      background: var(--white);
+      padding: 22px 16px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color .2s, background .2s;
     }
-    .img-upload-area:hover, .img-upload-area.drag-over { border-color: var(--primary); background: var(--accent); }
+    .img-upload-area:hover, .img-upload-area.drag-over { border-color: var(--marigold); background: var(--butter); }
     .img-upload-area input[type=file] { display: none; }
     .img-upload-preview { display: none; }
     .img-upload-preview.show { display: block; }
-    .img-preview-img { width: 100%; height: 180px; object-fit: cover; border-radius: 8px; margin-top: 10px; }
-    .img-upload-icon { font-size: 40px; margin-bottom: 10px; }
-    .img-upload-text { font-size: 14px; color: var(--text-light); }
-    .img-upload-text strong { color: var(--primary); }
+    .img-preview-img { width: 100%; max-height: 260px; object-fit: contain; border-radius: var(--radius-sm); background: var(--paper); }
+    .img-upload-icon { font-size: 36px; margin-bottom: 6px; }
+    .img-upload-text { font-size: 14px; color: var(--cocoa-soft); }
+    .img-upload-text strong { color: var(--cocoa); }
 
-    /* Toast */
+    /* Nhóm thẻ chọn (checkbox dạng chip) */
+    .tag-box {
+      background: var(--white);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 14px;
+      margin-bottom: 14px;
+    }
+    .tag-group-label { font-size: 13.5px; font-weight: 600; margin-bottom: 8px; }
+    .tag-group-label:not(:first-child) { margin-top: 14px; }
+    .tag-group { display: flex; flex-wrap: wrap; gap: 8px; }
+    .tag-group label {
+      display: inline-flex; align-items: center; gap: 6px;
+      min-height: 40px;
+      padding: 6px 14px 6px 10px;
+      border: 1.5px solid var(--line);
+      border-radius: 999px;
+      font-size: 14px;
+      cursor: pointer;
+      user-select: none;
+      transition: background .15s, border-color .15s;
+    }
+    .tag-group input { width: 18px; height: 18px; accent-color: var(--cocoa); }
+    .tag-group label:has(input:checked) { background: var(--butter); border-color: var(--cocoa); font-weight: 600; }
+
+    /* ── Toast ── */
     .toast {
-      position: fixed; top: 20px; right: 20px; z-index: 9999;
-      background: white; border-radius: 12px; padding: 14px 18px;
-      box-shadow: 0 10px 40px rgba(0,0,0,.14);
-      display: flex; align-items: center; gap: 10px;
+      position: fixed; z-index: 9999;
+      top: 10px; left: 10px; right: 10px;
+      background: var(--cocoa); color: var(--white);
+      border-radius: 14px;
+      padding: 12px 16px;
       font-size: 14px; font-weight: 600;
-      border-left: 4px solid var(--primary);
-      transform: translateX(130%); transition: transform .35s cubic-bezier(.22,.68,0,1.2);
-      max-width: 320px;
+      display: flex; align-items: center; gap: 10px;
+      box-shadow: var(--shadow);
+      border-left: 5px solid var(--marigold);
+      transform: translateY(-150%);
+      visibility: hidden;
+      transition: transform .35s var(--ease), visibility 0s linear .35s;
     }
-    .toast.show { transform: translateX(0); }
-    .toast.success { border-left-color: var(--success); }
-    .toast.error   { border-left-color: var(--danger); }
-    .toast.info    { border-left-color: var(--info); }
+    .toast.show { transform: translateY(0); visibility: visible; transition: transform .35s var(--ease); }
+    .toast.success { border-left-color: #4ADE80; }
+    .toast.error   { border-left-color: #F87171; }
+    .toast.info    { border-left-color: #60A5FA; }
 
-    /* Confirm dialog */
-    .confirm-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 3000; display: flex; align-items: center; justify-content: center; padding: 20px; }
-    .confirm-box { background: white; border-radius: 16px; padding: 28px; max-width: 380px; width: 100%; text-align: center; box-shadow: 0 16px 50px rgba(0,0,0,.2); }
-    .confirm-icon { font-size: 48px; margin-bottom: 14px; }
-    .confirm-title { font-size: 18px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
-    .confirm-msg { font-size: 14px; color: var(--text-light); margin-bottom: 24px; line-height: 1.6; }
-    .confirm-btns { display: flex; gap: 12px; }
-    .confirm-btns button { flex: 1; padding: 12px; border-radius: 20px; font-size: 14px; font-weight: 700; border: none; cursor: pointer; font-family: var(--font-body); transition: var(--transition); }
-    .confirm-cancel { background: var(--bg-dark); color: var(--text); border: 1.5px solid var(--border) !important; }
-    .confirm-cancel:hover { background: var(--accent); }
-    .confirm-ok { background: var(--danger); color: white; }
-    .confirm-ok:hover { background: #dc2626; }
-
-    /* Empty state */
-    .empty-state { text-align: center; padding: 60px 20px; color: var(--text-light); }
-    .empty-state .empty-icon { font-size: 64px; margin-bottom: 16px; }
-    .empty-state h3 { font-size: 20px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
-
-    /* Sidebar Overlay for Mobile */
-    .sidebar-overlay {
-      position: fixed; inset: 0;
-      background: rgba(0,0,0,.5);
-      z-index: 99;
-      opacity: 0; pointer-events: none;
-      transition: opacity .3s ease;
+    /* ── Hộp xác nhận ── */
+    .confirm-overlay {
+      position: fixed; inset: 0; z-index: 3000;
+      background: rgba(20, 10, 5, .5);
+      display: flex; align-items: flex-end; justify-content: center;
     }
-    .sidebar-overlay.show { opacity: 1; pointer-events: all; }
+    .confirm-box {
+      width: 100%;
+      background: var(--icing);
+      border-radius: 22px 22px 0 0;
+      padding: 24px var(--gutter) calc(18px + env(safe-area-inset-bottom, 0px));
+      text-align: center;
+    }
+    .confirm-icon { font-size: 40px; margin-bottom: 8px; }
+    .confirm-title { font-family: var(--font-display); font-size: 21px; font-weight: 800; margin-bottom: 6px; }
+    .confirm-msg { font-size: 14.5px; color: var(--cocoa-soft); line-height: 1.6; margin-bottom: 20px; }
+    .confirm-btns { display: flex; gap: 10px; }
+    .confirm-btns button { flex: 1; min-height: 50px; border-radius: 999px; font-size: 15px; font-weight: 700; border: 1.5px solid transparent; }
+    .confirm-cancel { background: var(--white); border-color: var(--line) !important; }
+    .confirm-ok { background: var(--danger); color: var(--white); }
+    .confirm-ok:hover { background: #A82815; }
 
-    .sidebar-close-btn {
-      display: none;
-      background: none; border: none;
-      color: rgba(255,255,255,.7);
-      font-size: 24px; cursor: pointer;
-      margin-left: auto; padding: 4px 8px;
+    /* ── Trống ── */
+    .empty-state {
+      text-align: center;
+      padding: 44px 16px;
+      background: var(--white);
+      border: 2px dashed var(--line);
+      border-radius: var(--radius);
+      color: var(--cocoa-soft);
+    }
+    .empty-state .empty-icon { font-size: 48px; margin-bottom: 10px; }
+    .empty-state h3 { font-family: var(--font-display); font-size: 20px; font-weight: 700; color: var(--cocoa); margin-bottom: 4px; }
+
+    /* ============================================================
+       >= 600px
+       ============================================================ */
+    @media (min-width: 600px) {
+      :root { --gutter: 22px; }
+      .inventory-grid { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 14px; }
+      .today-select-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
+      .search-filter { grid-template-columns: 1fr 240px; }
+      .panel-header > .btn, .panel-actions { width: auto; }
+      .panel-actions .btn { flex: 0 0 auto; }
+      .field-row, .settings-form .form-row { grid-template-columns: 1fr 1fr; }
+      .settings-card { padding: 22px 24px; }
+      .settings-form .btn { width: auto; }
+      .danger-actions { flex-direction: row; flex-wrap: wrap; }
+      .topbar-date { display: inline; }
+
+      .modal-overlay { align-items: center; padding: 24px; }
+      .a-modal {
+        max-width: 560px;
+        height: auto; max-height: 90dvh;
+        border-radius: 22px;
+        box-shadow: var(--shadow);
+        padding: 0 24px;
+      }
+      .a-modal-title { margin: 0 -24px 18px; padding: 18px 64px 14px 24px; border-radius: 22px 22px 0 0; }
+      .modal-close-btn { top: 12px; right: 14px; }
+      .modal-footer { margin: 20px -24px 0; padding: 14px 24px 18px; border-radius: 0 0 22px 22px; }
+
+      .confirm-overlay { align-items: center; padding: 24px; }
+      .confirm-box { max-width: 400px; border-radius: 22px; padding: 26px 24px 22px; }
+
+      .toast { left: auto; right: 20px; top: 20px; max-width: 360px; transform: translateX(calc(100% + 40px)); }
+      .toast.show { transform: translateX(0); }
     }
 
-    /* Responsive */
-    @media (max-width: 768px) {
-      .sidebar { transform: translateX(-100%); z-index: 1000; width: 280px; }
-      .sidebar.open { transform: translateX(0); }
-      .sidebar-close-btn { display: block; }
-      .admin-main { margin-left: 0; }
-      .hamburger-sidebar { display: flex; }
-      .admin-topbar { padding: 12px 16px; }
-      .admin-panel { padding: 16px 14px; }
-      .panel-header { margin-bottom: 16px; }
-      .panel-title { font-size: 18px; }
-      .inventory-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
-      .inv-card-img { height: 110px; font-size: 40px; }
-      .inv-card-body { padding: 8px 10px 10px; }
-      .inv-card-name { font-size: 13px; }
-      .inv-card-price { font-size: 13.5px; }
-      .inv-card-actions { flex-direction: column; gap: 4px; }
-      .inv-card-actions button { padding: 6px 8px; font-size: 11.5px; }
-      .today-select-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
-      .today-info-bar { padding: 10px 14px; font-size: 13px; }
-      .settings-form .form-row { grid-template-columns: 1fr; }
-      .modal-box { max-width: 95vw; max-height: 90vh; overflow-y: auto; padding: 20px 16px; }
-      input, select, textarea { font-size: 16px !important; }
+    /* ============================================================
+       DESKTOP >= 1024px: thanh bên cố định
+       ============================================================ */
+    @media (min-width: 1024px) {
+      :root { --tabbar-h: 0px; --topbar-h: 64px; }
+      .admin-main { margin-left: var(--sidebar-w); padding-bottom: 0; }
+
+      .sidebar {
+        top: 0; right: auto;
+        width: var(--sidebar-w); height: 100vh;
+        display: flex; flex-direction: column;
+        overflow-y: auto;
+        padding-bottom: 0;
+      }
+      .sidebar-logo {
+        display: flex; align-items: center; gap: 12px;
+        padding: 20px 18px;
+        border-bottom: 1px solid rgba(255, 255, 255, .08);
+      }
+      .sidebar-logo-img { width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--marigold); background: var(--white); object-fit: contain; flex-shrink: 0; }
+      .sidebar-logo-text { font-family: var(--font-display); font-size: 20px; font-weight: 800; line-height: 1.1; color: var(--white); }
+      .sidebar-logo-sub { font-family: var(--font-hand); font-size: 15px; color: var(--marigold); }
+
+      .sidebar-nav { display: block; height: auto; flex: 1; padding: 14px 12px; }
+      .nav-section-label {
+        display: block;
+        font-size: 12px; font-weight: 600;
+        color: rgba(255, 255, 255, .45);
+        padding: 14px 12px 6px;
+      }
+      .sidebar-link {
+        flex-direction: row; justify-content: flex-start;
+        gap: 12px;
+        min-height: 46px;
+        padding: 10px 12px;
+        border-radius: 12px;
+        font-size: 15px; font-weight: 500;
+        color: rgba(255, 255, 255, .75);
+        text-align: left;
+      }
+      .sidebar-link::before { display: none; }
+      .sidebar-link .s-icon { width: 22px; text-align: center; font-size: 18px; }
+      .sidebar-link:hover { background: rgba(255, 255, 255, .06); color: var(--white); }
+      .sidebar-link.active { background: var(--marigold); color: var(--cocoa); font-weight: 700; }
+
+      .sidebar-footer { display: block; padding: 14px 12px 18px; border-top: 1px solid rgba(255, 255, 255, .08); }
+      .btn-logout {
+        width: 100%; min-height: 44px;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, .15);
+        background: transparent;
+        color: rgba(255, 255, 255, .75);
+        font-size: 14px; font-weight: 600;
+        display: flex; align-items: center; justify-content: center; gap: 8px;
+      }
+      .btn-logout:hover { background: rgba(200, 50, 31, .25); color: #FFB4A8; border-color: transparent; }
+
+      .topbar-logo, .topbar-logout, .topbar-title { display: none; }
+      .topbar-admin { display: flex; }
+      .admin-topbar { padding: 10px 28px; }
+      .admin-panel { padding: 26px 28px 40px; }
+      .panel-title { font-size: 30px; }
+
+      .panel-actions-sticky { position: static; padding: 0; background: none; border: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+      #panel-today { padding-bottom: 40px; }
+    }
+
+    @media (hover: hover) and (pointer: fine) {
+      .inv-card { transition: box-shadow .2s; }
+      .inv-card:hover { box-shadow: var(--shadow); }
+      .today-select-card:hover { border-color: var(--marigold); }
+      .today-select-card.selected:hover { border-color: var(--cocoa); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; }
     }
   </style>
 </head>
@@ -421,20 +719,21 @@
 <div class="login-screen" id="loginScreen">
   <div class="login-card">
     <div class="login-icon"><img src="images/logo.png" alt="Tiệm bánh Mitu" /></div>
+    <p class="login-hello">chào chủ tiệm</p>
     <h1 class="login-title">Đăng nhập</h1>
-    <p class="login-sub">Trang quản trị – Tiệm bánh Mitu</p>
+    <p class="login-sub">Trang quản trị Tiệm bánh Mitu</p>
 
     <form class="login-form" id="loginForm" novalidate>
       <div class="form-group">
         <label for="loginUser">Tên đăng nhập</label>
-        <input type="text" id="loginUser" placeholder="admin" autocomplete="username" />
+        <input type="text" id="loginUser" placeholder="admin" autocomplete="username" autocapitalize="none" spellcheck="false" />
       </div>
       <div class="form-group">
         <label for="loginPass">Mật khẩu</label>
         <input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password" />
       </div>
-      <div class="login-error" id="loginError">❌ Tên đăng nhập hoặc mật khẩu sai!</div>
-      <button type="submit" class="btn-login">🔑 Đăng nhập</button>
+      <div class="login-error" id="loginError" role="alert">Sai tên đăng nhập hoặc mật khẩu. Kiểm tra lại rồi thử lần nữa.</div>
+      <button type="submit" class="btn-login">Đăng nhập</button>
     </form>
     <a href="index.html" class="back-to-site">← Về trang khách hàng</a>
   </div>
@@ -442,75 +741,77 @@
 
 <!-- ==================== ADMIN LAYOUT ==================== -->
 <div class="admin-layout hidden" id="adminLayout">
-  <!-- Backdrop overlay for mobile sidebar -->
   <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
-  <!-- Sidebar -->
+  <!-- Sidebar (desktop) / Thanh tab dưới (điện thoại) -->
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-logo">
-      <img src="images/logo.png" alt="Tiệm bánh Mitu" class="sidebar-logo-img" />
+      <img src="images/logo.png" alt="" class="sidebar-logo-img" />
       <div>
         <div class="sidebar-logo-text">Mitu Admin</div>
-        <div class="sidebar-logo-sub">Quản trị tiệm bánh</div>
+        <div class="sidebar-logo-sub">quản lý tiệm bánh</div>
       </div>
       <button class="sidebar-close-btn" id="sidebarCloseBtn" aria-label="Đóng thanh bên">✕</button>
     </div>
 
-    <nav class="sidebar-nav">
+    <nav class="sidebar-nav" aria-label="Mục quản trị">
       <div class="nav-section-label">Quản lý</div>
-      <div class="sidebar-link active" data-panel="inventory">
-        <span class="s-icon">📦</span> Kho bánh
+      <div class="sidebar-link active" data-panel="inventory" role="button" tabindex="0">
+        <span class="s-icon" aria-hidden="true">📦</span> Kho bánh
       </div>
-      <div class="sidebar-link" data-panel="today">
-        <span class="s-icon">🌞</span> Menu hôm nay
+      <div class="sidebar-link" data-panel="today" role="button" tabindex="0">
+        <span class="s-icon" aria-hidden="true">🌞</span> Menu hôm nay
       </div>
-      <div class="sidebar-link" data-panel="feedback">
-        <span class="s-icon">💖</span> Ảnh Feedback
+      <div class="sidebar-link" data-panel="feedback" role="button" tabindex="0">
+        <span class="s-icon" aria-hidden="true">💖</span> Feedback
       </div>
 
       <div class="nav-section-label">Hệ thống</div>
-      <div class="sidebar-link" data-panel="settings">
-        <span class="s-icon">⚙️</span> Cài đặt
+      <div class="sidebar-link" data-panel="settings" role="button" tabindex="0">
+        <span class="s-icon" aria-hidden="true">⚙️</span> Cài đặt
       </div>
-      <a href="index.html" class="sidebar-link" target="_blank">
-        <span class="s-icon">🔗</span> Xem trang web
+      <a href="index.html" class="sidebar-link" target="_blank" rel="noopener">
+        <span class="s-icon" aria-hidden="true">🔗</span> Xem web
       </a>
     </nav>
 
     <div class="sidebar-footer">
-      <button class="btn-logout" id="logoutBtn">🚪 Đăng xuất</button>
+      <button class="btn-logout" id="logoutBtn">Đăng xuất</button>
     </div>
   </aside>
 
   <!-- Main -->
   <div class="admin-main">
-    <!-- Top bar -->
-    <div class="admin-topbar">
-      <div style="display:flex;align-items:center;gap:12px">
-        <div class="hamburger-sidebar" id="sidebarToggle">
-          <span></span><span></span><span></span>
-        </div>
-        <span class="topbar-title" id="topbarTitle">Kho bánh</span>
+    <header class="admin-topbar">
+      <div class="topbar-left">
+        <div class="hamburger-sidebar" id="sidebarToggle"></div>
+        <img src="images/logo.png" alt="" class="topbar-logo" />
+        <span class="topbar-title">Mitu Admin</span>
+        <span id="topbarTitle" hidden>📦 Kho bánh</span>
       </div>
-      <div style="display:flex;align-items:center;gap:16px">
+      <div class="topbar-right">
         <span class="topbar-date" id="topbarDate"></span>
         <div class="topbar-admin">
-          <div class="topbar-avatar">👤</div>
+          <div class="topbar-avatar" aria-hidden="true">M</div>
           <span class="topbar-name" id="topbarName">Admin</span>
         </div>
+        <button type="button" class="topbar-logout" id="topbarLogoutBtn">Đăng xuất</button>
       </div>
-    </div>
+    </header>
 
     <!-- ── PANEL: Kho Bánh ── -->
-    <div class="admin-panel active" id="panel-inventory">
+    <section class="admin-panel active" id="panel-inventory">
       <div class="panel-header">
-        <h2 class="panel-title">📦 Kho bánh</h2>
+        <div>
+          <h2 class="panel-title">Kho bánh</h2>
+          <p class="panel-desc">Tất cả mẫu bánh của tiệm. Chọn bánh nào bán hôm nay ở mục Menu hôm nay.</p>
+        </div>
         <button class="btn btn-primary" id="addCakeBtn">+ Thêm bánh mới</button>
       </div>
 
       <div class="search-filter">
-        <input type="search" class="search-input" id="invSearch" placeholder="🔍 Tìm theo tên bánh..." />
-        <select class="search-select" id="invCatFilter">
+        <input type="search" class="search-input" id="invSearch" placeholder="Tìm theo tên bánh" aria-label="Tìm theo tên bánh" />
+        <select class="search-select" id="invCatFilter" aria-label="Lọc theo danh mục">
           <option value="all">Tất cả danh mục</option>
           <option value="birthday">Bánh sinh nhật</option>
           <option value="mini">Bánh Mini</option>
@@ -527,36 +828,35 @@
       <div class="inventory-grid" id="inventoryGrid">
         <!-- rendered by admin.js -->
       </div>
-    </div>
+    </section>
 
     <!-- ── PANEL: Menu Hôm Nay ── -->
-    <div class="admin-panel" id="panel-today">
+    <section class="admin-panel" id="panel-today">
       <div class="panel-header">
-        <h2 class="panel-title">🌞 Menu hôm nay</h2>
-        <div style="display:flex;gap:10px">
+        <h2 class="panel-title">Menu hôm nay</h2>
+        <div class="panel-actions panel-actions-sticky">
           <button class="btn btn-secondary" id="deselectAllBtn">Bỏ chọn tất cả</button>
-          <button class="btn btn-primary" id="saveTodayBtn">💾 Lưu menu hôm nay</button>
+          <button class="btn btn-primary" id="saveTodayBtn">Lưu menu hôm nay</button>
         </div>
       </div>
 
       <div class="today-info-bar">
-        <span>📅</span>
         <span class="today-date-text" id="todayPanelDate"></span>
         <span class="today-count-badge" id="todayCount">0 bánh đã chọn</span>
-        <span style="font-size:13px;color:var(--text-light)">Tick chọn những bánh tiệm có sẵn hôm nay</span>
+        <span class="today-hint">Chạm vào bánh tiệm có sẵn hôm nay, rồi bấm Lưu.</span>
       </div>
 
       <div class="today-select-grid" id="todaySelectGrid">
         <!-- rendered by admin.js -->
       </div>
-    </div>
+    </section>
 
     <!-- ── PANEL: Ảnh Feedback ── -->
-    <div class="admin-panel" id="panel-feedback">
+    <section class="admin-panel" id="panel-feedback">
       <div class="panel-header">
         <div>
-          <h2 class="panel-title">💖 Quản lý ảnh Feedback</h2>
-          <p style="font-size:13px;color:var(--text-light);margin-top:4px">Thêm, sửa, xóa các ảnh phản hồi thực tế từ khách hàng hiển thị trên vòng quay trang chủ.</p>
+          <h2 class="panel-title">Ảnh Feedback</h2>
+          <p class="panel-desc">Ảnh phản hồi thật của khách, hiển thị ở vòng quay trên trang chủ.</p>
         </div>
         <button class="btn btn-primary" id="addFeedbackBtn">+ Thêm ảnh Feedback</button>
       </div>
@@ -564,131 +864,129 @@
       <div class="inventory-grid" id="adminFeedbackGrid">
         <!-- rendered by admin.js -->
       </div>
-    </div>
+    </section>
 
     <!-- ── PANEL: Cài đặt ── -->
-    <div class="admin-panel" id="panel-settings">
+    <section class="admin-panel" id="panel-settings">
       <div class="panel-header">
-        <h2 class="panel-title">⚙️ Cài đặt</h2>
+        <h2 class="panel-title">Cài đặt</h2>
       </div>
 
-      <!-- Shop info -->
       <div class="settings-card">
-        <h3>🏪 Thông tin tiệm</h3>
+        <h3>Thông tin tiệm</h3>
         <form class="settings-form" id="shopInfoForm">
           <div class="form-row">
             <div class="form-group">
-              <label>Tên tiệm</label>
+              <label for="s-shopName">Tên tiệm</label>
               <input type="text" id="s-shopName" placeholder="Tiệm bánh Mitu" />
             </div>
             <div class="form-group">
-              <label>Số điện thoại</label>
-              <input type="tel" id="s-shopPhone" placeholder="0936290932" />
+              <label for="s-shopPhone">Số điện thoại</label>
+              <input type="tel" id="s-shopPhone" placeholder="0936290932" inputmode="tel" />
             </div>
           </div>
           <div class="form-group">
-            <label>Số Zalo nhận đơn ⭐</label>
-            <input type="tel" id="s-zaloPhone" placeholder="0936290932" />
-            <div class="form-hint">Đây là số Zalo sẽ nhận tất cả đơn đặt bánh từ khách hàng.</div>
+            <label for="s-zaloPhone">Số Zalo nhận đơn</label>
+            <input type="tel" id="s-zaloPhone" placeholder="0936290932" inputmode="tel" />
+            <div class="form-hint">Mọi đơn đặt bánh của khách sẽ gửi tới số Zalo này.</div>
           </div>
           <div class="form-group">
-            <label>Slogan</label>
+            <label for="s-shopSlogan">Slogan</label>
             <input type="text" id="s-shopSlogan" placeholder="Bánh ngọt handmade – Tình yêu trong từng chiếc bánh" />
           </div>
           <div class="form-group">
-            <label>Địa chỉ tiệm</label>
+            <label for="s-shopAddress">Địa chỉ tiệm</label>
             <input type="text" id="s-shopAddress" placeholder="173 Vạn Phúc - Hà Đông, Hà Nội, Việt Nam" />
           </div>
           <div class="form-group">
-            <label>Link Facebook (nếu có)</label>
-            <input type="url" id="s-facebookUrl" placeholder="https://facebook.com/tiembanhMitu" />
+            <label for="s-facebookUrl">Link Facebook</label>
+            <input type="url" id="s-facebookUrl" placeholder="https://facebook.com/tiembanhMitu" inputmode="url" />
           </div>
-          <div class="form-group">
-            <label>Link TikTok</label>
-            <input type="url" id="s-tiktokUrl" placeholder="https://www.tiktok.com/@tiembanhmitu" />
+          <div class="form-row">
+            <div class="form-group">
+              <label for="s-tiktokUrl">Link TikTok</label>
+              <input type="url" id="s-tiktokUrl" placeholder="https://www.tiktok.com/@tiembanhmitu" inputmode="url" />
+            </div>
+            <div class="form-group">
+              <label for="s-instagramUrl">Link Instagram</label>
+              <input type="url" id="s-instagramUrl" placeholder="https://www.instagram.com/tiembanh_mitu/" inputmode="url" />
+            </div>
           </div>
-          <div class="form-group">
-            <label>Link Instagram</label>
-            <input type="url" id="s-instagramUrl" placeholder="https://www.instagram.com/tiembanh_mitu/" />
-          </div>
-          <button type="submit" class="btn btn-primary">💾 Lưu thông tin tiệm</button>
+          <button type="submit" class="btn btn-primary">Lưu thông tin tiệm</button>
         </form>
       </div>
 
-      <!-- Change password -->
       <div class="settings-card">
-        <h3>🔒 Đổi mật khẩu đăng nhập</h3>
+        <h3>Đổi mật khẩu đăng nhập</h3>
         <form class="settings-form" id="changePassForm">
           <div class="form-group">
-            <label>Mật khẩu hiện tại</label>
-            <input type="password" id="s-curPass" placeholder="••••••••" />
+            <label for="s-curPass">Mật khẩu hiện tại</label>
+            <input type="password" id="s-curPass" placeholder="••••••••" autocomplete="current-password" />
           </div>
-          <div class="form-group">
-            <label>Mật khẩu mới</label>
-            <input type="password" id="s-newPass" placeholder="••••••••" />
+          <div class="form-row">
+            <div class="form-group">
+              <label for="s-newPass">Mật khẩu mới</label>
+              <input type="password" id="s-newPass" placeholder="••••••••" autocomplete="new-password" />
+            </div>
+            <div class="form-group">
+              <label for="s-confirmPass">Nhập lại mật khẩu mới</label>
+              <input type="password" id="s-confirmPass" placeholder="••••••••" autocomplete="new-password" />
+            </div>
           </div>
-          <div class="form-group">
-            <label>Xác nhận mật khẩu mới</label>
-            <input type="password" id="s-confirmPass" placeholder="••••••••" />
-          </div>
-          <button type="submit" class="btn btn-primary">🔒 Đổi mật khẩu</button>
+          <button type="submit" class="btn btn-primary">Đổi mật khẩu</button>
         </form>
       </div>
 
-      <!-- Danger zone -->
-      <div class="settings-card" style="border-color:rgba(239,68,68,.3)">
-        <h3 style="color:#dc2626">⚠️ Vùng nguy hiểm</h3>
-        <p style="font-size:13px;color:var(--text-light);margin-bottom:14px">Các hành động bên dưới không thể hoàn tác.</p>
-        <button class="btn btn-danger" id="clearTodayBtn">🗑️ Xóa menu hôm nay</button>
-        &nbsp;
-        <button class="btn btn-danger" id="clearAllCakesBtn">🗑️ Xóa toàn bộ kho bánh</button>
+      <div class="settings-card danger">
+        <h3>Vùng nguy hiểm</h3>
+        <p class="panel-desc" style="margin:0 0 14px">Các thao tác dưới đây không hoàn tác được.</p>
+        <div class="danger-actions">
+          <button class="btn btn-danger" id="clearTodayBtn">Xóa menu hôm nay</button>
+          <button class="btn btn-danger" id="clearAllCakesBtn">Xóa toàn bộ kho bánh</button>
+        </div>
       </div>
-    </div>
+    </section>
   </div><!-- /admin-main -->
 </div><!-- /admin-layout -->
 
 <!-- ==================== ADD/EDIT CAKE MODAL ==================== -->
-<div class="modal-overlay" id="cakeModal" role="dialog" aria-modal="true">
+<div class="modal-overlay" id="cakeModal" role="dialog" aria-modal="true" aria-labelledby="cakeModalTitle">
   <div class="a-modal">
-    <button class="modal-close-btn" id="cakeModalClose">×</button>
+    <button class="modal-close-btn" id="cakeModalClose" aria-label="Đóng">×</button>
     <h2 class="a-modal-title" id="cakeModalTitle">Thêm bánh mới</h2>
 
     <form id="cakeForm" novalidate>
       <input type="hidden" id="cakeId" />
 
-      <!-- Image upload -->
-      <div class="form-group" style="margin-bottom:18px">
-        <label style="display:block;font-size:13px;font-weight:700;color:var(--text);margin-bottom:8px">Hình ảnh bánh</label>
+      <div class="field">
+        <span class="field-label">Hình ảnh bánh</span>
         <div class="img-upload-area" id="imgUploadArea">
           <input type="file" id="imgFileInput" accept="image/*" />
           <div id="imgUploadDefault">
-            <div class="img-upload-icon">📷</div>
-            <div class="img-upload-text">Nhấn hoặc kéo thả ảnh vào đây<br><strong>JPG, PNG, WebP</strong> – tối đa 5MB</div>
+            <div class="img-upload-icon" aria-hidden="true">📷</div>
+            <div class="img-upload-text">Chạm để chọn ảnh hoặc kéo thả vào đây<br><strong>JPG, PNG, WebP</strong> – tối đa 5MB</div>
           </div>
           <div class="img-upload-preview" id="imgUploadPreview">
-            <img class="img-preview-img" id="imgPreviewEl" src="" alt="preview" />
-            <button type="button" class="btn btn-sm btn-secondary" id="removeImgBtn" style="margin-top:10px">✕ Xóa ảnh</button>
+            <img class="img-preview-img" id="imgPreviewEl" src="" alt="Ảnh xem trước" />
+            <button type="button" class="btn btn-sm btn-secondary" id="removeImgBtn" style="margin-top:10px">Xóa ảnh</button>
           </div>
         </div>
       </div>
 
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
-        <div class="form-group">
-          <label style="display:block;font-size:13px;font-weight:700;color:var(--text);margin-bottom:6px">Tên bánh *</label>
-          <input type="text" id="cakeName" placeholder="VD: Bánh sinh nhật Hàn Quốc" required
-            style="width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:var(--font-body);color:var(--text);background:var(--bg);outline:none;transition:all .3s" />
+      <div class="field-row">
+        <div class="field">
+          <label class="field-label" for="cakeName">Tên bánh *</label>
+          <input class="field-input" type="text" id="cakeName" placeholder="VD: Bánh sinh nhật Hàn Quốc" required />
         </div>
-        <div class="form-group">
-          <label style="display:block;font-size:13px;font-weight:700;color:var(--text);margin-bottom:6px">Giá (VNĐ) *</label>
-          <input type="number" id="cakePrice" placeholder="250000" min="0" required
-            style="width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:var(--font-body);color:var(--text);background:var(--bg);outline:none;transition:all .3s" />
+        <div class="field">
+          <label class="field-label" for="cakePrice">Giá (VNĐ) *</label>
+          <input class="field-input" type="number" id="cakePrice" placeholder="250000" min="0" inputmode="numeric" required />
         </div>
       </div>
 
-      <div class="form-group" style="margin:14px 0">
-        <label style="display:block;font-size:13px;font-weight:700;color:var(--text);margin-bottom:6px">Danh mục chính *</label>
-        <select id="cakeCategory"
-          style="width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:var(--font-body);color:var(--text);background:var(--bg);outline:none">
+      <div class="field">
+        <label class="field-label" for="cakeCategory">Danh mục chính *</label>
+        <select class="field-input" id="cakeCategory">
           <option value="birthday">Bánh sinh nhật</option>
           <option value="mini">Bánh Mini</option>
           <option value="fruit">Bánh Hoa quả</option>
@@ -701,118 +999,112 @@
         </select>
       </div>
 
-      <!-- Multi-tag attributes -->
-      <div style="background:var(--bg-dark);padding:14px;border-radius:10px;border:1px solid var(--border);margin-bottom:16px">
-        <div style="font-size:12.5px;font-weight:700;color:var(--secondary);margin-bottom:8px">👥 Đối tượng phù hợp:</div>
-        <div style="display:flex;flex-wrap:wrap;gap:12px;font-size:13px" id="audienceChecks">
-          <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" value="male" /> Nam</label>
-          <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" value="female" /> Nữ</label>
-          <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" value="boy" /> Bé trai</label>
-          <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" value="girl" /> Bé gái</label>
-          <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" value="kids" /> Trẻ em</label>
+      <div class="tag-box">
+        <div class="tag-group-label">Đối tượng phù hợp</div>
+        <div class="tag-group" id="audienceChecks">
+          <label><input type="checkbox" value="male" /> Nam</label>
+          <label><input type="checkbox" value="female" /> Nữ</label>
+          <label><input type="checkbox" value="boy" /> Bé trai</label>
+          <label><input type="checkbox" value="girl" /> Bé gái</label>
+          <label><input type="checkbox" value="kids" /> Trẻ em</label>
         </div>
 
-        <div style="font-size:12.5px;font-weight:700;color:var(--secondary);margin:12px 0 8px">🎂 Kiểu bánh:</div>
-        <div style="display:flex;flex-wrap:wrap;gap:12px;font-size:13px" id="typeChecks">
-          <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" value="mini" /> Mini</label>
-          <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" value="fruit" /> Hoa quả</label>
-          <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" value="square" /> Vuông</label>
-          <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" value="custom-shaped" /> Tạo hình</label>
+        <div class="tag-group-label">Kiểu bánh</div>
+        <div class="tag-group" id="typeChecks">
+          <label><input type="checkbox" value="mini" /> Mini</label>
+          <label><input type="checkbox" value="fruit" /> Hoa quả</label>
+          <label><input type="checkbox" value="square" /> Vuông</label>
+          <label><input type="checkbox" value="custom-shaped" /> Tạo hình</label>
         </div>
 
-        <div style="font-size:12.5px;font-weight:700;color:var(--secondary);margin:12px 0 8px">✨ Phong cách:</div>
-        <div style="display:flex;flex-wrap:wrap;gap:12px;font-size:13px" id="styleChecks">
-          <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" value="elegant" /> Thanh lịch</label>
-          <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" value="cute" /> Dễ thương</label>
-          <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" value="luxury" /> Sang trọng</label>
-          <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" value="funny" /> Troll / Vui nhộn</label>
+        <div class="tag-group-label">Phong cách</div>
+        <div class="tag-group" id="styleChecks">
+          <label><input type="checkbox" value="elegant" /> Thanh lịch</label>
+          <label><input type="checkbox" value="cute" /> Dễ thương</label>
+          <label><input type="checkbox" value="luxury" /> Sang trọng</label>
+          <label><input type="checkbox" value="funny" /> Troll / Vui nhộn</label>
+        </div>
+
+        <div class="tag-group-label">Trang chủ</div>
+        <div class="tag-group">
+          <label><input type="checkbox" id="cakeBestseller" /> Bán chạy nhất (hiện ở băng chuyền đầu trang)</label>
         </div>
       </div>
 
-      <div class="form-group" style="margin-bottom:20px">
-        <label style="display:block;font-size:13px;font-weight:700;color:var(--text);margin-bottom:6px">Mô tả ngắn</label>
-        <textarea id="cakeDesc" placeholder="Mô tả nguyên liệu, kích thước, đặc điểm của bánh..."
-          style="width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:var(--font-body);color:var(--text);background:var(--bg);outline:none;min-height:75px;resize:vertical"></textarea>
+      <div class="field">
+        <label class="field-label" for="cakeDesc">Mô tả ngắn</label>
+        <textarea class="field-input" id="cakeDesc" placeholder="Nguyên liệu, kích thước, đặc điểm của bánh..."></textarea>
       </div>
 
-      <div style="display:flex;gap:10px">
-        <button type="button" class="btn btn-secondary" id="cakeModalCancelBtn" style="flex:1">Hủy</button>
-        <button type="submit" class="btn btn-primary" style="flex:2">💾 Lưu bánh</button>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="cakeModalCancelBtn">Hủy</button>
+        <button type="submit" class="btn btn-primary">Lưu bánh</button>
       </div>
     </form>
   </div>
 </div>
 
 <!-- ==================== ADD/EDIT FEEDBACK MODAL ==================== -->
-<div class="modal-overlay" id="feedbackAdminModal" role="dialog" aria-modal="true">
-  <div class="a-modal" style="max-width:560px">
-    <button class="modal-close-btn" id="feedbackModalClose">×</button>
-    <h2 class="a-modal-title" id="feedbackModalTitle">➕ Thêm ảnh Feedback mới</h2>
+<div class="modal-overlay" id="feedbackAdminModal" role="dialog" aria-modal="true" aria-labelledby="feedbackModalTitle">
+  <div class="a-modal">
+    <button class="modal-close-btn" id="feedbackModalClose" aria-label="Đóng">×</button>
+    <h2 class="a-modal-title" id="feedbackModalTitle">Thêm ảnh Feedback</h2>
 
     <form id="feedbackAdminForm" novalidate>
       <input type="hidden" id="fbEditId" />
 
-      <!-- Image upload / URL -->
-      <div class="form-group" style="margin-bottom:18px">
-        <label style="display:block;font-size:13px;font-weight:700;color:var(--text);margin-bottom:8px">Hình ảnh Feedback (ảnh chụp tiệc, bánh, tin nhắn Zalo) *</label>
+      <div class="field">
+        <span class="field-label">Ảnh feedback (ảnh bánh, ảnh tiệc, tin nhắn Zalo) *</span>
         <div class="img-upload-area" id="fbImgUploadArea">
           <input type="file" id="fbImgFileInput" accept="image/*" />
           <div id="fbImgUploadDefault">
-            <div class="img-upload-icon">📸</div>
-            <div class="img-upload-text">Nhấn hoặc kéo thả ảnh vào đây<br><strong>JPG, PNG, WebP</strong> – tối đa 5MB</div>
+            <div class="img-upload-icon" aria-hidden="true">📸</div>
+            <div class="img-upload-text">Chạm để chọn ảnh hoặc kéo thả vào đây<br><strong>JPG, PNG, WebP</strong> – tối đa 5MB</div>
           </div>
           <div class="img-upload-preview" id="fbImgUploadPreview">
-            <img class="img-preview-img" id="fbImgPreviewEl" src="" alt="preview" />
-            <button type="button" class="btn btn-sm btn-secondary" id="removeFbImgBtn" style="margin-top:10px">✕ Xóa ảnh</button>
+            <img class="img-preview-img" id="fbImgPreviewEl" src="" alt="Ảnh xem trước" />
+            <button type="button" class="btn btn-sm btn-secondary" id="removeFbImgBtn" style="margin-top:10px">Xóa ảnh</button>
           </div>
         </div>
-        <div style="margin-top:8px">
-          <input type="text" id="fbImgUrl" placeholder="Hoặc dán đường dẫn ảnh / URL..."
-            style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:var(--font-body);color:var(--text);background:var(--bg);outline:none" />
+        <input class="field-input" type="text" id="fbImgUrl" placeholder="Hoặc dán đường dẫn ảnh" inputmode="url" style="margin-top:8px" aria-label="Đường dẫn ảnh" />
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label class="field-label" for="fbName">Tên khách hàng *</label>
+          <input class="field-input" type="text" id="fbName" placeholder="VD: Thảo My" required />
+        </div>
+        <div class="field">
+          <label class="field-label" for="fbChannel">Kênh phản hồi</label>
+          <input class="field-input" type="text" id="fbChannel" placeholder="VD: 💬 Phản hồi qua Zalo" value="💬 Phản hồi qua Zalo" />
         </div>
       </div>
 
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
-        <div class="form-group">
-          <label style="display:block;font-size:13px;font-weight:700;color:var(--text);margin-bottom:6px">Tên khách hàng *</label>
-          <input type="text" id="fbName" placeholder="VD: Thảo My" required
-            style="width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:var(--font-body);color:var(--text);background:var(--bg);outline:none" />
-        </div>
-        <div class="form-group">
-          <label style="display:block;font-size:13px;font-weight:700;color:var(--text);margin-bottom:6px">Kênh phản hồi</label>
-          <input type="text" id="fbChannel" placeholder="VD: 💬 Phản hồi qua Zalo" value="💬 Phản hồi qua Zalo"
-            style="width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:var(--font-body);color:var(--text);background:var(--bg);outline:none" />
-        </div>
+      <div class="field">
+        <label class="field-label" for="fbQuote">Lời khen / tin nhắn của khách *</label>
+        <input class="field-input" type="text" id="fbQuote" placeholder="VD: Bánh xinh quá anh ạ 💕" required />
       </div>
 
-      <div class="form-group" style="margin-bottom:14px">
-        <label style="display:block;font-size:13px;font-weight:700;color:var(--text);margin-bottom:6px">Lời khen / Tin nhắn khách *</label>
-        <input type="text" id="fbQuote" placeholder="VD: “Bánh xinh quá anh ạ 💕”" required
-          style="width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:var(--font-body);color:var(--text);background:var(--bg);outline:none" />
+      <div class="field">
+        <label class="field-label" for="fbBadge">Nhãn bánh / dịp</label>
+        <input class="field-input" type="text" id="fbBadge" placeholder="VD: 🎂 Bánh sinh nhật gấu nhỏ" />
       </div>
 
-      <div class="form-group" style="margin-bottom:14px">
-        <label style="display:block;font-size:13px;font-weight:700;color:var(--text);margin-bottom:6px">Nhãn bánh / Dịp sự kiện</label>
-        <input type="text" id="fbBadge" placeholder="VD: 🎂 Bánh sinh nhật gấu nhỏ"
-          style="width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:var(--font-body);color:var(--text);background:var(--bg);outline:none" />
+      <div class="field">
+        <label class="field-label" for="fbContext">Mô tả bánh / chú thích ảnh</label>
+        <textarea class="field-input" id="fbContext" placeholder="VD: Bánh kem tone trắng, nơ hồng, kèm chú gấu nhỏ..."></textarea>
       </div>
 
-      <div class="form-group" style="margin-bottom:20px">
-        <label style="display:block;font-size:13px;font-weight:700;color:var(--text);margin-bottom:6px">Mô tả bánh / Chú thích ảnh</label>
-        <textarea id="fbContext" placeholder="VD: Mẫu bánh kem tone trắng kem nơ hồng đính kèm chú gấu nhỏ..."
-          style="width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:var(--font-body);color:var(--text);background:var(--bg);outline:none;min-height:70px;resize:vertical"></textarea>
-      </div>
-
-      <div style="display:flex;gap:10px">
-        <button type="button" class="btn btn-secondary" id="fbModalCancelBtn" style="flex:1">Hủy</button>
-        <button type="submit" class="btn btn-primary" style="flex:2">💾 Lưu Feedback</button>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="fbModalCancelBtn">Hủy</button>
+        <button type="submit" class="btn btn-primary">Lưu Feedback</button>
       </div>
     </form>
   </div>
 </div>
 
 <!-- Toast -->
-<div class="toast" id="adminToast"></div>
+<div class="toast" id="adminToast" role="status" aria-live="polite"></div>
 
 <!-- Scripts -->
 <script src="js/config.js"></script>

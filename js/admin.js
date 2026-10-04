@@ -73,10 +73,12 @@ function initLogin() {
 
 // ── Logout ────────────────────────────────────────────────────
 function initLogout() {
-  document.getElementById("logoutBtn")?.addEventListener("click", () => {
+  const logout = () => {
     sessionStorage.removeItem("mitu_logged_in");
     location.reload();
-  });
+  };
+  document.getElementById("logoutBtn")?.addEventListener("click", logout);
+  document.getElementById("topbarLogoutBtn")?.addEventListener("click", logout);
 }
 
 // ── Sidebar ───────────────────────────────────────────────────
@@ -100,11 +102,15 @@ function initSidebar() {
       const titles = { inventory: "📦 Kho bánh", today: "🌞 Menu hôm nay", feedback: "💖 Ảnh Feedback", settings: "⚙️ Cài đặt" };
       topbarTitle.textContent = titles[panelId] || panelId;
 
-      // Close sidebar on mobile
-      if (window.innerWidth <= 768) {
+      // Mobile: tabs live in the bottom bar, so jump back to the top of the new panel
+      if (window.innerWidth < 1024) {
         sidebar.classList.remove("open");
         document.getElementById("sidebarOverlay")?.classList.remove("show");
+        window.scrollTo(0, 0);
       }
+    });
+    link.addEventListener("keydown", e => {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); link.click(); }
     });
   });
 
@@ -327,6 +333,7 @@ function openCakeModal(id) {
     document.querySelectorAll("#styleChecks input[type='checkbox']").forEach(cb => {
       cb.checked = Array.isArray(cake.style) && cake.style.includes(cb.value);
     });
+    document.getElementById("cakeBestseller").checked = !!cake.bestseller;
 
     if (cake.image) {
       uploadedImgB64 = cake.image;
@@ -350,7 +357,7 @@ function resetCakeForm() {
   document.getElementById("imgFileInput").value = "";
   editingCakeId = null;
 
-  document.querySelectorAll("#audienceChecks input, #typeChecks input, #styleChecks input").forEach(cb => {
+  document.querySelectorAll("#audienceChecks input, #typeChecks input, #styleChecks input, #cakeBestseller").forEach(cb => {
     cb.checked = false;
   });
 }
@@ -365,6 +372,7 @@ function saveCake() {
   const audience = Array.from(document.querySelectorAll("#audienceChecks input[type='checkbox']:checked")).map(cb => cb.value);
   const type     = Array.from(document.querySelectorAll("#typeChecks input[type='checkbox']:checked")).map(cb => cb.value);
   const style    = Array.from(document.querySelectorAll("#styleChecks input[type='checkbox']:checked")).map(cb => cb.value);
+  const bestseller = document.getElementById("cakeBestseller").checked;
 
   if (!name) { showToast("❌ Vui lòng nhập tên bánh.", "error"); return; }
   if (isNaN(price) || price < 0) { showToast("❌ Vui lòng nhập giá hợp lệ.", "error"); return; }
@@ -378,7 +386,7 @@ function saveCake() {
         name, price, category,
         description: desc,
         desc: desc,
-        audience, type, style,
+        audience, type, style, bestseller,
         image: uploadedImgB64 !== null ? uploadedImgB64 : allCakes[idx].image,
         updatedAt: new Date().toISOString(),
       };
@@ -391,7 +399,7 @@ function saveCake() {
       name, price, category,
       description: desc,
       desc: desc,
-      audience, type, style,
+      audience, type, style, bestseller,
       image: uploadedImgB64 || null,
       createdAt: new Date().toISOString(),
     };

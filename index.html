@@ -17,7 +17,10 @@
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@600;700;800&family=Montserrat:wght@300;400;500;600;700;800&family=Quicksand:wght@600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Be+Vietnam+Pro:wght@400;500;600;700&family=Pangolin&display=swap" rel="stylesheet" />
+
+  <!-- Bật hiệu ứng chuyển cảnh trước khi trang vẽ (bỏ qua nếu người dùng tắt chuyển động) -->
+  <script>if(!matchMedia('(prefers-reduced-motion: reduce)').matches)document.documentElement.classList.add('motion-ok');</script>
 
   <!-- Stylesheet -->
   <link rel="stylesheet" href="css/style.css" />
@@ -50,20 +53,23 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
     <ul class="nav-links" id="navLinks">
       <li><a href="#home" class="active">Trang chủ</a></li>
+      <li><a href="#today">Menu hôm nay</a></li>
       <li class="nav-item-dropdown" id="navMenuDropdown">
-        <a href="#today" class="nav-link-dropdown" id="navMenuBtn">
-          Menu hôm nay <span class="nav-arrow">▾</span>
+        <a href="#catalog" class="nav-link-dropdown" id="navMenuBtn">
+          Các mẫu bánh <span class="nav-arrow">▾</span>
         </a>
         <ul class="nav-dropdown-menu">
-          <li><a href="#today" data-cat="all">Tất cả bánh</a></li>
-          <li><a href="#today" data-cat="birthday">Bánh sinh nhật</a></li>
-          <li><a href="#today" data-cat="mini">Bánh Mini</a></li>
-          <li><a href="#today" data-cat="fruit">Bánh Hoa quả</a></li>
-          <li><a href="#today" data-cat="male">Bánh cho Nam</a></li>
-          <li><a href="#today" data-cat="female">Bánh cho Nữ</a></li>
-          <li><a href="#today" data-cat="boy">Bánh cho Bé Trai</a></li>
-          <li><a href="#today" data-cat="girl">Bánh cho Bé Gái</a></li>
-          <li><a href="#today" data-cat="troll">Bánh Troll &amp; Vui nhộn</a></li>
+          <li><a href="#bestseller" class="nav-dropdown-feature">Bán chạy nhất</a></li>
+          <li class="nav-dropdown-sep" role="separator"></li>
+          <li><a href="#catalog" data-cat="all">Tất cả bánh</a></li>
+          <li><a href="#catalog" data-cat="birthday">Bánh sinh nhật</a></li>
+          <li><a href="#catalog" data-cat="mini">Bánh Mini</a></li>
+          <li><a href="#catalog" data-cat="fruit">Bánh Hoa quả</a></li>
+          <li><a href="#catalog" data-cat="male">Bánh cho Nam</a></li>
+          <li><a href="#catalog" data-cat="female">Bánh cho Nữ</a></li>
+          <li><a href="#catalog" data-cat="boy">Bánh cho Bé Trai</a></li>
+          <li><a href="#catalog" data-cat="girl">Bánh cho Bé Gái</a></li>
+          <li><a href="#catalog" data-cat="troll">Bánh Troll &amp; Vui nhộn</a></li>
         </ul>
       </li>
       <li><a href="#custom">Đặt bánh riêng</a></li>
@@ -102,12 +108,12 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <div class="hero-slide active">
       <div class="hero-slide-bg slide-bg-1"></div>
       <div class="hero-content">
-        <div class="hero-badge">✨ Handmade với tình yêu</div>
+        <div class="hero-badge">làm tay mỗi sáng</div>
         <h1 class="hero-title">Bánh ngọt<br>từ trái tim</h1>
         <p class="hero-sub">Mỗi chiếc bánh là một câu chuyện, được làm thủ công với nguyên liệu tươi ngon nhất.</p>
         <div class="hero-btns">
-          <a href="#today" class="btn btn-primary">🎂 Xem menu hôm nay</a>
-          <a href="#custom" class="btn btn-outline-white">✏️ Đặt bánh riêng</a>
+          <a href="#today" class="btn btn-primary">Xem menu hôm nay</a>
+          <a href="#custom" class="btn btn-outline-white">Đặt bánh riêng</a>
         </div>
       </div>
     </div>
@@ -116,12 +122,12 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <div class="hero-slide">
       <div class="hero-slide-bg slide-bg-2"></div>
       <div class="hero-content">
-        <div class="hero-badge">🎉 Sinh nhật – Kỷ niệm – Đặc biệt</div>
+        <div class="hero-badge">sinh nhật, kỷ niệm, ngày đặc biệt</div>
         <h1 class="hero-title">Bánh sinh nhật<br>theo mẫu</h1>
         <p class="hero-sub">Thiết kế riêng theo yêu cầu, chủ tiệm tư vấn tận tình và báo giá nhanh qua Zalo.</p>
         <div class="hero-btns">
-          <a href="#custom" class="btn btn-primary">💬 Đặt theo mẫu</a>
-          <a href="#today" class="btn btn-outline-white">🛒 Menu hôm nay</a>
+          <a href="#custom" class="btn btn-primary">Đặt theo mẫu</a>
+          <a href="#today" class="btn btn-outline-white">Menu hôm nay</a>
         </div>
       </div>
     </div>
@@ -130,12 +136,12 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <div class="hero-slide">
       <div class="hero-slide-bg slide-bg-3"></div>
       <div class="hero-content">
-        <div class="hero-badge">💝 Mousse – Cheesecake – Kem</div>
+        <div class="hero-badge">mousse, cheesecake, bánh kem</div>
         <h1 class="hero-title">Đủ loại bánh<br>cho mọi dịp</h1>
         <p class="hero-sub">Mousse, cheesecake, bánh kem Hàn Quốc... Mỗi ngày tiệm sẽ có menu mới tươi nhất.</p>
         <div class="hero-btns">
-          <a href="#today" class="btn btn-primary">🎂 Xem menu hôm nay</a>
-          <a href="https://zalo.me/0936290932" class="btn btn-outline-white" id="heroZaloBtn" target="_blank" rel="noopener noreferrer">📱 Liên hệ Zalo</a>
+          <a href="#today" class="btn btn-primary">Xem menu hôm nay</a>
+          <a href="https://zalo.me/0936290932" class="btn btn-outline-white" id="heroZaloBtn" target="_blank" rel="noopener noreferrer">Nhắn Zalo cho tiệm</a>
         </div>
       </div>
     </div>
@@ -145,6 +151,13 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   <button class="hero-arrow prev" id="heroPrev" aria-label="Slide trước">‹</button>
   <button class="hero-arrow next" id="heroNext" aria-label="Slide tiếp">›</button>
 
+  <!-- Lớp kem phết dưới đáy hero -->
+  <div class="hero-frosting" aria-hidden="true">
+    <svg viewBox="0 0 1440 48" preserveAspectRatio="none" fill="currentColor" focusable="false">
+      <path d="M0 48V30C120 14 240 10 360 22S600 40 720 26 960 6 1080 18 1320 38 1440 22V48Z"/>
+    </svg>
+  </div>
+
   <!-- Dots -->
   <div class="hero-dots" id="heroDots">
     <div class="hero-dot active" data-index="0"></div>
@@ -153,117 +166,124 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   </div>
 </section>
 
-<!-- ==================== CATALOG & TODAY'S MENU ==================== -->
-<section class="section catalog-section" id="today">
+<!-- ==================== MENU HÔM NAY ==================== -->
+<section class="section today-section" id="today">
   <div class="container">
+    <div class="section-tag-center">
+      <span class="section-tag">ra lò hôm nay</span>
+    </div>
+    <h2 class="section-title text-center">Menu bánh hôm nay</h2>
+    <p class="today-date text-center" id="todayDate"></p>
 
-    <!-- Catalog Section Header & Mobile Filter/Search -->
-    <div class="catalog-header-area">
-      <div class="section-tag-center">
-        <span class="section-tag">🍰 Bánh tươi mỗi ngày</span>
+    <div class="cake-grid" id="todayGrid">
+      <!-- populated by app.js -->
+    </div>
+    <div class="grid-more" id="todayMore"></div>
+  </div>
+</section>
+
+<!-- ==================== BÁN CHẠY NHẤT (băng chuyền lướt) ==================== -->
+<section class="section bestseller-section" id="bestseller">
+  <div class="drip drip--icing" data-drip aria-hidden="true"></div>
+  <div class="container">
+    <div class="bestseller-head">
+      <div>
+        <span class="section-tag">khách gọi lại nhiều nhất</span>
+        <h2 class="section-title">Bán chạy nhất</h2>
       </div>
-      <h2 class="section-title text-center">Menu bánh hôm nay</h2>
-      <p class="section-desc text-center">Các mẫu bánh thủ công thơm ngon, sẵn sàng phục vụ và thiết kế riêng theo ý bạn.</p>
-
-      <!-- Instant Mobile & Desktop Search Bar -->
-      <div class="catalog-search-wrap">
-        <div class="catalog-search-box">
-          <span class="search-ico">🔍</span>
-          <input type="search" id="cakeSearchInput" placeholder="Tìm tên bánh, vị bánh, loại bánh..." aria-label="Tìm kiếm bánh" />
-          <button type="button" class="btn-clear-search hidden" id="clearSearchBtn" aria-label="Xóa tìm kiếm">✕</button>
-        </div>
+      <div class="bestseller-nav">
+        <button type="button" class="bestseller-arrow" id="bestPrev" aria-label="Bánh trước">‹</button>
+        <button type="button" class="bestseller-arrow" id="bestNext" aria-label="Bánh tiếp">›</button>
       </div>
+    </div>
+    <ol class="bestseller-track" id="bestsellerTrack">
+      <!-- populated by app.js -->
+    </ol>
+  </div>
+</section>
 
-      <!-- Horizontal Scrollable Category Pills -->
-      <div class="main-cat-bar" id="mainCatBar" role="tablist" aria-label="Danh mục bánh">
-        <button class="cat-pill active" data-cat="all" role="tab" aria-selected="true">🌟 Tất cả</button>
-        <button class="cat-pill" data-cat="birthday" role="tab" aria-selected="false">🎂 Bánh sinh nhật</button>
-        <button class="cat-pill" data-cat="mini" role="tab" aria-selected="false">🧁 Bánh Mini</button>
-        <button class="cat-pill" data-cat="fruit" role="tab" aria-selected="false">🍓 Hoa quả</button>
-        <button class="cat-pill" data-cat="boy" role="tab" aria-selected="false">👦 Bé Trai</button>
-        <button class="cat-pill" data-cat="girl" role="tab" aria-selected="false">👧 Bé Gái</button>
-        <button class="cat-pill" data-cat="male" role="tab" aria-selected="false">👔 Cho Nam</button>
-        <button class="cat-pill" data-cat="female" role="tab" aria-selected="false">👗 Cho Nữ</button>
-        <button class="cat-pill" data-cat="troll" role="tab" aria-selected="false">🤪 Troll vui</button>
+<!-- ==================== CÁC MẪU BÁNH ==================== -->
+<section class="section catalog-section" id="catalog">
+  <div class="drip drip--cocoa" data-drip aria-hidden="true"></div>
+  <div class="container">
+    <div class="section-tag-center">
+      <span class="section-tag">chọn theo dịp, theo người nhận</span>
+    </div>
+    <h2 class="section-title text-center">Các mẫu bánh</h2>
+
+    <!-- Ô loại bánh (app.js vẽ) -->
+    <div class="cat-tiles" id="catTiles" role="tablist" aria-label="Loại bánh"></div>
+
+    <div class="catalog-search-wrap">
+      <div class="catalog-search-box">
+        <svg class="search-ico" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+        <input type="search" id="cakeSearchInput" placeholder="Tìm tên bánh, vị bánh..." aria-label="Tìm mẫu bánh" />
+        <button type="button" class="btn-clear-search hidden" id="clearSearchBtn" aria-label="Xóa tìm kiếm">✕</button>
       </div>
     </div>
 
-    <!-- Active Filter Status Bar, Date Badge & View Mode Toggle -->
+    <!-- Số kết quả và nút xóa bộ lọc -->
     <div class="filter-status-bar" id="filterStatusBar">
       <div class="filter-status-info">
-        <div class="date-badge">
-          <span>📅</span>
-          <span id="todayDate"></span>
-        </div>
         <span id="filterResultCount" class="filter-count-badge" style="display:none"></span>
         <div class="active-chips" id="activeChips"></div>
       </div>
       <div class="filter-status-actions">
-        <!-- View Mode Switch: Slider vs Grid -->
-        <div class="view-mode-toggle" id="viewModeToggle" aria-label="Chuyển chế độ hiển thị">
-          <button type="button" class="btn-view-mode active" id="btnModeSlider" title="Xem băng chuyền lướt">
-            <span>🎞️</span> <span class="mode-text">Lướt</span>
-          </button>
-          <button type="button" class="btn-view-mode" id="btnModeGrid" title="Xem dạng lưới">
-            <span>📱</span> <span class="mode-text">Lưới</span>
-          </button>
-        </div>
-        <button class="btn-clear-filters hidden" id="clearFiltersBtn" title="Đặt lại tất cả bộ lọc">
-          ↺ Xóa bộ lọc
-        </button>
+        <button class="btn-clear-filters hidden" id="clearFiltersBtn">Xóa bộ lọc</button>
       </div>
     </div>
 
-    <!-- Cake grid (rendered by JS) -->
     <div class="cake-grid" id="cakeGrid">
       <!-- populated by app.js -->
     </div>
+    <div class="grid-more" id="catalogMore"></div>
   </div>
 </section>
 
 <!-- ==================== CUSTOM ORDER ==================== -->
 <section class="section custom-section" id="custom">
+  <div class="drip drip--butter" data-drip aria-hidden="true"></div>
   <div class="container">
     <div class="custom-showcase">
       <div class="section-tag-center">
-        <span class="section-tag">✏️ Thiết kế riêng</span>
+        <span class="section-tag">gửi ảnh, tiệm làm theo</span>
       </div>
-      <h2 class="section-title text-center text-white">Bánh đặt theo mẫu</h2>
-      <p class="section-desc text-center text-white-muted">
+      <h2 class="section-title text-center">Bánh đặt theo mẫu</h2>
+      <p class="section-desc text-center custom-desc">
         Bạn có hình mẫu bánh muốn đặt? Chỉ cần gửi ảnh mẫu trực tiếp qua Zalo, chủ tiệm Mitu sẽ tư vấn kích thước, hương vị và báo giá nhanh nhất!
       </p>
 
-      <!-- Feature cards grid -->
-      <div class="custom-features-grid">
-        <div class="custom-feat-card">
-          <div class="feat-card-icon">🎨</div>
-          <h4>Thiết kế theo mẫu</h4>
-          <p>Làm theo đúng mẫu ảnh bạn gửi, cá nhân hóa chữ viết và chi tiết trang trí.</p>
-        </div>
-        <div class="custom-feat-card">
-          <div class="feat-card-icon">💬</div>
-          <h4>Tư vấn Zalo 24/7</h4>
-          <p>Tư vấn mẫu mã, chọn size bánh và hương vị kem phù hợp bữa tiệc hoàn toàn miễn phí.</p>
-        </div>
-        <div class="custom-feat-card">
-          <div class="feat-card-icon">⏰</div>
+      <!-- Các bước đặt bánh (thứ tự thật) -->
+      <ol class="custom-features-grid">
+        <li class="custom-feat-card">
+          <div class="feat-card-icon" aria-hidden="true">1</div>
+          <h4>Gửi ảnh mẫu qua Zalo</h4>
+          <p>Ảnh bánh bạn thích, chữ muốn viết lên bánh và ngày cần nhận.</p>
+        </li>
+        <li class="custom-feat-card">
+          <div class="feat-card-icon" aria-hidden="true">2</div>
+          <h4>Tiệm tư vấn &amp; báo giá</h4>
+          <p>Chọn size, cốt bánh và vị kem hợp với bữa tiệc. Tư vấn miễn phí.</p>
+        </li>
+        <li class="custom-feat-card">
+          <div class="feat-card-icon" aria-hidden="true">3</div>
           <h4>Đặt trước 1–2 ngày</h4>
-          <p>Chuẩn bị nguyên liệu tươi ngon nhất, hoàn thiện tỉ mỉ và chuẩn vị từng chi tiết.</p>
-        </div>
-        <div class="custom-feat-card">
-          <div class="feat-card-icon">🚚</div>
-          <h4>Giao hàng tận nơi</h4>
-          <p>Hỗ trợ giao bánh tận nơi an toàn hoặc nhận trực tiếp tiện lợi tại cửa tiệm.</p>
-        </div>
-      </div>
+          <p>Để tiệm chuẩn bị nguyên liệu tươi và trang trí tỉ mỉ từng chi tiết.</p>
+        </li>
+        <li class="custom-feat-card">
+          <div class="feat-card-icon" aria-hidden="true">4</div>
+          <h4>Nhận bánh</h4>
+          <p>Giao tận nơi hoặc ghé lấy tại tiệm, 173 Vạn Phúc, Hà Đông.</p>
+        </li>
+      </ol>
 
       <!-- Action buttons -->
       <div class="custom-actions">
         <a href="https://zalo.me/0936290932" class="btn btn-primary btn-custom-zalo" id="directZaloBtn" target="_blank" rel="noopener noreferrer">
-          💬 Nhắn Zalo gửi mẫu bánh ngay
+          Nhắn Zalo gửi mẫu bánh
         </a>
         <a href="tel:0936290932" class="btn btn-outline-white btn-custom-phone" id="customPhoneBtn">
-          📞 Hotline: 0936 290 932
+          Gọi 0936 290 932
         </a>
       </div>
     </div>
@@ -274,9 +294,9 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <section class="section feedback-section" id="feedback">
   <div class="container">
     <div class="section-tag-center">
-      <span class="section-tag">💖 Khách hàng yêu thương</span>
+      <span class="section-tag">khách gửi lại cho tiệm</span>
     </div>
-    <h2 class="section-title text-center">Khoảnh khắc ngọt ngào<br>&amp; Phản hồi từ khách hàng</h2>
+    <h2 class="section-title text-center">Khoảnh khắc ngọt ngào<br>từ khách hàng</h2>
     <p class="section-desc text-center">
       Mỗi lời khen và hình ảnh ấm áp từ bữa tiệc là nguồn động lực to lớn để Tiệm bánh Mitu chăm chút từng chiếc bánh ngọt ngào nhất.
     </p>
@@ -284,28 +304,24 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <!-- Trust metrics bar -->
     <div class="feedback-stats-bar">
       <div class="fb-stat-pill">
-        <span class="fb-stat-icon">⭐</span>
         <div>
           <strong>4.9 / 5.0</strong>
           <span>Đánh giá hài lòng</span>
         </div>
       </div>
       <div class="fb-stat-pill">
-        <span class="fb-stat-icon">🎂</span>
         <div>
           <strong>500+ Chiếc bánh</strong>
           <span>Đã trao gửi yêu thương</span>
         </div>
       </div>
       <div class="fb-stat-pill">
-        <span class="fb-stat-icon">💬</span>
         <div>
           <strong>100% Ảnh thật</strong>
           <span>Feedback qua Zalo &amp; tiệc</span>
         </div>
       </div>
       <div class="fb-stat-pill">
-        <span class="fb-stat-icon">🍓</span>
         <div>
           <strong>Tươi mới 100%</strong>
           <span>Nguyên liệu chuẩn an toàn</span>
@@ -326,18 +342,19 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
 <!-- ==================== ABOUT ==================== -->
 <section class="section about-section" id="about">
+  <div class="drip drip--butter" data-drip aria-hidden="true"></div>
   <div class="container">
     <div class="about-inner">
-      <!-- Images (decorative since no real photos yet) -->
+      <!-- Ảnh bánh thật của tiệm -->
       <div class="about-img-box">
-        <div class="about-img-main">🎂</div>
-        <div class="about-img-small about-img-small-1">🍰</div>
-        <div class="about-img-small about-img-small-2">🧁</div>
+        <div class="about-img-main"><img src="images/hero-bg-3.jpg" alt="Tủ bánh kem nhiều mẫu" loading="lazy" /></div>
+        <div class="about-img-small about-img-small-1"><img src="images/feedback/feedback-1.png" alt="Bánh sinh nhật mèo trắng của tiệm Mitu" loading="lazy" /></div>
+        <div class="about-img-small about-img-small-2"><img src="images/feedback/feedback-2.png" alt="Bánh kem trái cây chúc mừng sinh nhật" loading="lazy" /></div>
       </div>
 
       <!-- Content -->
       <div class="about-content">
-        <div class="section-tag">🏡 Câu chuyện tiệm</div>
+        <div class="section-tag">câu chuyện của tiệm</div>
         <h2 class="section-title">Về Tiệm<br>bánh Mitu</h2>
 
         <p class="about-text">
@@ -359,8 +376,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
             <div class="stat-label">Handmade</div>
           </div>
           <div class="stat-card">
-            <div class="stat-num">❤️</div>
-            <div class="stat-label">Tâm huyết</div>
+            <div class="stat-num">1–2</div>
+            <div class="stat-label">Ngày đặt trước</div>
           </div>
         </div>
       </div>
@@ -370,6 +387,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
 <!-- ==================== FOOTER ==================== -->
 <footer class="footer">
+  <div class="drip drip--icing" data-drip aria-hidden="true"></div>
   <div class="footer-main">
     <!-- Brand -->
     <div class="footer-brand">
@@ -449,9 +467,9 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <div class="footer-col">
       <h4>Loại bánh</h4>
       <ul class="footer-links">
-        <li><a href="#today" data-cat="birthday">🎂 Bánh sinh nhật</a></li>
-        <li><a href="#today" data-cat="mini">🧁 Bánh mini</a></li>
-        <li><a href="#today" data-cat="fruit">🍓 Bánh hoa quả</a></li>
+        <li><a href="#catalog" data-cat="birthday">Bánh sinh nhật</a></li>
+        <li><a href="#catalog" data-cat="mini">Bánh mini</a></li>
+        <li><a href="#catalog" data-cat="fruit">Bánh hoa quả</a></li>
       </ul>
     </div>
 
@@ -480,7 +498,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   </div>
 
   <div class="footer-bottom">
-    <p>© 2024 Tiệm bánh Mitu. Tất cả quyền được bảo lưu. Made with ❤️</p>
+    <p>© 2024 Tiệm bánh Mitu. Tất cả quyền được bảo lưu.</p>
   </div>
 </footer>
 
@@ -528,11 +546,11 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <h2 class="modal-title" id="modalTitle">Tên bánh</h2>
     <div class="modal-price" id="modalPrice">—</div>
     <p class="modal-desc" id="modalDesc"></p>
-    <div class="order-msg-label">📋 Nội dung tin nhắn đặt bánh:</div>
+    <div class="order-msg-label">Tin nhắn sẽ gửi cho tiệm</div>
     <div class="order-msg-box" id="orderMsgBox"></div>
     <div class="modal-actions">
-      <button class="btn-copy-msg" id="copyMsgBtn">📋 Sao chép nội dung</button>
-      <button class="btn-open-zalo" id="openZaloBtn">💬 Mở Zalo đặt ngay</button>
+      <button class="btn-copy-msg" id="copyMsgBtn">Sao chép tin nhắn</button>
+      <button class="btn-open-zalo" id="openZaloBtn">Mở Zalo để đặt</button>
     </div>
   </div>
 </div>
@@ -540,23 +558,23 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <!-- ==================== MOBILE BOTTOM NAVIGATION ==================== -->
 <nav class="mobile-bottom-nav" id="mobileBottomNav" aria-label="Thanh điều hướng dưới màn hình">
   <a href="#home" class="bnav-item active" id="bnavHome">
-    <span class="bnav-icon">🏠</span>
+    <svg class="bnav-icon" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11l8-7 8 7v9a1 1 0 0 1-1 1h-4v-6h-6v6H5a1 1 0 0 1-1-1z"/></svg>
     <span class="bnav-label">Trang chủ</span>
   </a>
   <a href="#today" class="bnav-item" id="bnavToday">
-    <span class="bnav-icon">🎂</span>
-    <span class="bnav-label">Menu bánh</span>
+    <svg class="bnav-icon" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h16v-7a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2z"/><path d="M4 15c1.5 1.3 3 1.3 4 0s2.5-1.3 4 0 2.5 1.3 4 0 2.5-1.3 4 0"/><path d="M12 11V7"/><path d="M12 4.5c.6.7.6 1.3 0 2-.6-.7-.6-1.3 0-2z"/></svg>
+    <span class="bnav-label">Hôm nay</span>
   </a>
-  <a href="#feedback" class="bnav-item" id="bnavFeedback">
-    <span class="bnav-icon">💖</span>
-    <span class="bnav-label">Feedback</span>
+  <a href="#catalog" class="bnav-item" id="bnavCatalog">
+    <svg class="bnav-icon" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></svg>
+    <span class="bnav-label">Mẫu bánh</span>
   </a>
   <a href="#custom" class="bnav-item" id="bnavCustom">
-    <span class="bnav-icon">✏️</span>
-    <span class="bnav-label">Đặt mẫu</span>
+    <svg class="bnav-icon" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 4l5 5L9 20H4v-5z"/><path d="M13 6l5 5"/></svg>
+    <span class="bnav-label">Đặt riêng</span>
   </a>
   <a href="https://zalo.me/0936290932" class="bnav-item bnav-zalo" id="bnavZalo" target="_blank" rel="noopener noreferrer">
-    <span class="bnav-icon">💬</span>
+    <span class="bnav-icon bnav-zalo-mark" aria-hidden="true">Zalo</span>
     <span class="bnav-label">Chat Zalo</span>
   </a>
 </nav>

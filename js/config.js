@@ -19,6 +19,7 @@ const MITU_DEFAULTS = {
 const MITU_DEFAULT_CAKES = [
   {
     id: "mitu-cake-1",
+    bestseller: true,
     name: "Bánh sinh nhật Spider-Man",
     category: "boy",
     audience: ["boy", "kids"],
@@ -30,6 +31,7 @@ const MITU_DEFAULT_CAKES = [
   },
   {
     id: "mitu-cake-2",
+    bestseller: true,
     name: "Bánh Kem Dâu Tây Tươi Hàn Quốc",
     category: "fruit",
     audience: ["female"],
@@ -41,6 +43,7 @@ const MITU_DEFAULT_CAKES = [
   },
   {
     id: "mitu-cake-3",
+    bestseller: true,
     name: "Bánh Mini Bento Pastel Xinh Xắn",
     category: "mini",
     audience: ["female", "girl"],
@@ -96,6 +99,7 @@ const MITU_DEFAULT_CAKES = [
   },
   {
     id: "mitu-cake-8",
+    bestseller: true,
     name: "Bánh Sinh Nhật Hoa Quả Nhiệt Đới",
     category: "birthday",
     audience: ["female", "male"],
@@ -151,6 +155,7 @@ const MITU_DEFAULT_CAKES = [
   },
   {
     id: "mitu-cake-13",
+    bestseller: true,
     name: "Bánh Sinh Nhật Vàng Hoàng Gia Luxury",
     category: "birthday",
     audience: ["male", "female"],
@@ -173,13 +178,14 @@ const MITU_DEFAULT_CAKES = [
   },
   {
     id: "mitu-cake-15",
+    bestseller: true,
     name: "Bánh Hoa Hồng Trắng Tinh Khôi",
     category: "female",
     audience: ["female"],
     type: ["custom-shaped"],
     style: ["elegant", "luxury"],
     price: 460000,
-    image: "https://images.unsplash.com/photo-1535141192574-5d4897c13136?w=600&auto=format&fit=crop&q=80",
+    image: "https://images.unsplash.com/photo-1535254973040-607b474cb50d?w=600&auto=format&fit=crop&q=80",
     desc: "Tạo hình cánh hoa mềm mại, kem bơ Thụy Sĩ mịn màng thơm nhẹ mùi hoa nhài thanh khiết."
   },
   {
@@ -284,6 +290,20 @@ const MITU_DEFAULT_FEEDBACKS = [
     localStorage.setItem("mitu_cakes", JSON.stringify(MITU_DEFAULT_CAKES));
     cakes = MITU_DEFAULT_CAKES;
   }
+  // Ảnh mẫu đã chết (404) → thay bằng ảnh còn sống, kể cả trong kho đã lưu ở trình duyệt
+  const DEAD_IMAGES = {
+    "photo-1535141192574-5d4897c13136": "photo-1535254973040-607b474cb50d",
+  };
+  let fixedImages = false;
+  cakes.forEach(c => {
+    for (const [dead, alive] of Object.entries(DEAD_IMAGES)) {
+      if (typeof c.image === "string" && c.image.includes(dead)) {
+        c.image = c.image.replace(dead, alive);
+        fixedImages = true;
+      }
+    }
+  });
+  if (fixedImages) localStorage.setItem("mitu_cakes", JSON.stringify(cakes));
   // Khởi tạo menu hôm nay có toàn bộ bánh mẫu
   let today = null;
   try { today = JSON.parse(localStorage.getItem("mitu_today") || "null"); } catch(e) { today = null; }
