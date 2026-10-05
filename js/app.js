@@ -305,10 +305,11 @@ function setCategory(cat) {
 }
 
 // Lưới bánh: hiện GRID_LIMIT bánh đầu, phần còn lại sau nút "Xem thêm"
-function fillGrid(grid, moreBox, cakes) {
+// opts.todayIds: Set ID bánh có hôm nay → gắn nhãn "Có hôm nay" (bỏ trống trong chính mục Menu hôm nay)
+function fillGrid(grid, moreBox, cakes, opts = {}) {
   grid.innerHTML = "";
   const append = list => list.forEach((cake, i) => {
-    const card = createCakeCard(cake);
+    const card = createCakeCard(cake, opts);
     card.style.setProperty("--i", Math.min(i, 11));
     grid.appendChild(card);
   });
@@ -329,15 +330,34 @@ function fillGrid(grid, moreBox, cakes) {
   moreBox.appendChild(btn);
 }
 
-// Menu hôm nay: bánh admin chọn cho hôm nay (chưa chọn thì cả kho)
+// Bộ ID bánh có hôm nay (menu của ngày trước không tính)
+function getTodayIdSet() {
+  return new Set(getTodayMenu().ids);
+}
+
+// Menu hôm nay: chỉ bánh admin đã chọn và lưu cho đúng ngày hôm nay.
+// Chưa chọn thì báo trống, không lấy cả kho (tránh lẫn với "Các mẫu bánh").
 function renderTodayGrid() {
   const grid = document.getElementById("todayGrid");
   if (!grid) return;
-  const allCakes = getCakes();
-  const todayObj = getTodayMenu();
-  let cakes = todayObj?.ids?.length ? allCakes.filter(c => todayObj.ids.includes(c.id)) : [];
-  if (cakes.length === 0) cakes = allCakes;
-  fillGrid(grid, document.getElementById("todayMore"), cakes);
+  const moreBox = document.getElementById("todayMore");
+  const todayIds = getTodayIdSet();
+  const cakes = getCakes().filter(c => todayIds.has(c.id));
+
+  if (cakes.length === 0) {
+    const zalo = (getConfig().zaloPhone || "0936290932").replace(/\s/g, "");
+    grid.innerHTML = `
+      <div class="empty-menu">
+        <h3>Tiệm đang cập nhật menu hôm nay</h3>
+        <p>Nhắn Zalo để hỏi bánh có sẵn, hoặc chọn mẫu bên dưới để đặt trước.</p>
+        <a class="btn-clear-filters" href="https://zalo.me/${escHtml(zalo)}" target="_blank" rel="noopener">Hỏi qua Zalo</a>
+        <a class="btn-clear-filters" href="#catalog">Xem các mẫu bánh</a>
+      </div>`;
+    if (moreBox) moreBox.innerHTML = "";
+    return;
+  }
+
+  fillGrid(grid, moreBox, cakes);
 }
 
 // Ô loại bánh: ảnh lấy từ bánh đầu tiên thuộc loại, kèm số mẫu
@@ -586,20 +606,14 @@ function renderCakeGrid() {
     return;
   }
 
-  fillGrid(grid, moreBox, cakes);
+  fillGrid(grid, moreBox, cakes, { todayIds: getTodayIdSet() });
 }
 
 // ── Bán chạy nhất (băng chuyền lướt) ──────────────────────────
-// Lấy bánh được admin đánh dấu "bán chạy". Kho cũ trong localStorage
-// chưa có cờ này thì dùng danh sách mặc định trong config.js.
+// Bánh admin đánh dấu "bán chạy" (kho cũ chưa có cờ đã được gắn sẵn trong config.js).
+// Admin bỏ đánh dấu hết thì ẩn hẳn mục này.
 function getBestsellers() {
-  const cakes = getCakes();
-  let list = cakes.filter(c => c.bestseller);
-  if (list.length === 0 && typeof MITU_DEFAULT_CAKES !== "undefined") {
-    const defaults = MITU_DEFAULT_CAKES.filter(c => c.bestseller).map(c => c.id);
-    list = defaults.map(id => cakes.find(c => c.id === id)).filter(Boolean);
-  }
-  return list.slice(0, 8);
+  return getCakes().filter(c => c.bestseller).slice(0, BESTSELLER_LIMIT);
 }
 
 function renderBestsellers() {
@@ -703,7 +717,7 @@ function renderBestsellers() {
   requestAnimationFrame(tick);
 }
 
-function createCakeCard(cake) {
+function createCakeCard(cake, opts = {}) {
   const card = document.createElement("div");
   card.className = "cake-card";
   card.dataset.id = cake.id;
@@ -711,13 +725,18 @@ function createCakeCard(cake) {
   const categoryLabel = getCategoryLabel(cake.category);
 
   const imgHTML = cake.image
-    ? `<img src="${cake.image}" alt="${escHtml(cake.name)}" loading="lazy" />`
+    ? `<img src="${escHtml(cake.image)}" alt="${escHtml(cake.name)}" loading="lazy" />`
     : `<div class="cake-img-placeholder">Mitu</div>`;
+
+  const flags = [];
+  if (cake.bestseller) flags.push(`<span class="cake-flag cake-flag--best">Bán chạy</span>`);
+  if (opts.todayIds?.has(cake.id)) flags.push(`<span class="cake-flag cake-flag--today">Có hôm nay</span>`);
 
   card.innerHTML = `
     <div class="cake-img-wrap">
       ${imgHTML}
-      ${categoryLabel ? `<span class="cake-category-badge">${categoryLabel}</span>` : ""}
+      ${categoryLabel ? `<span class="cake-category-badge">${escHtml(categoryLabel)}</span>` : ""}
+      ${flags.length ? `<span class="cake-flags">${flags.join("")}</span>` : ""}
     </div>
     <div class="cake-body">
       <h3 class="cake-name">${escHtml(cake.name)}</h3>
@@ -1025,12 +1044,12 @@ function openOrderModal(cake) {
   // Image
   const imgBox = document.getElementById("modalCakeImg");
   imgBox.innerHTML = cake.image
-    ? `<img class="modal-cake-img" src="${cake.image}" alt="${escHtml(cake.name)}" />`
+    ? `<img class="modal-cake-img" src="${escHtml(cake.image)}" alt="${escHtml(cake.name)}" />`
     : `<div class="modal-cake-placeholder">Mitu</div>`;
 
   document.getElementById("modalTitle").textContent = cake.name;
   document.getElementById("modalPrice").textContent = formatPrice(cake.price);
-  document.getElementById("modalDesc").textContent = cake.description || "Bánh handmade được làm từ nguyên liệu tươi ngon, an toàn.";
+  document.getElementById("modalDesc").textContent = cake.desc || cake.description || "Bánh handmade được làm từ nguyên liệu tươi ngon, an toàn.";
   document.getElementById("orderMsgBox").textContent = buildCakeOrderMsg(cake);
   document.getElementById("copyMsgBtn").textContent = "Sao chép tin nhắn";
 

@@ -16,6 +16,9 @@ const MITU_DEFAULTS = {
   adminPass: "mitu2024",
 };
 
+// Số bánh tối đa ở băng chuyền "Bán chạy nhất" trên trang chủ
+const BESTSELLER_LIMIT = 8;
+
 const MITU_DEFAULT_CAKES = [
   {
     id: "mitu-cake-1",
@@ -277,6 +280,7 @@ const MITU_DEFAULT_FEEDBACKS = [
   // Cập nhật nếu chưa có hoặc đang lưu thông tin mẫu cũ 0900000000 hoặc chưa có tiktokUrl
   if (!cfg || cfg.shopPhone === "0900000000" || cfg.zaloPhone === "0900000000" || !cfg.shopAddress || cfg.shopAddress.includes("Địa chỉ tiệm bánh của bạn") || !cfg.tiktokUrl) {
     const updatedCfg = {
+      ...cfg,
       shopName: cfg?.shopName || MITU_DEFAULTS.shopName,
       shopSlogan: cfg?.shopSlogan || MITU_DEFAULTS.shopSlogan,
       shopAddress: MITU_DEFAULTS.shopAddress,
@@ -295,12 +299,20 @@ const MITU_DEFAULT_FEEDBACKS = [
   if (!existingUser) {
     localStorage.setItem("mitu_admin_user", MITU_DEFAULTS.adminUser);
   }
-  // Khởi tạo kho bánh đầy đủ mẫu nếu chưa có hoặc đang rỗng/cũ
-  let cakes = [];
-  try { cakes = JSON.parse(localStorage.getItem("mitu_cakes") || "[]"); } catch(e) { cakes = []; }
-  if (!cakes || cakes.length < 12 || !cakes[0]?.audience) {
-    localStorage.setItem("mitu_cakes", JSON.stringify(MITU_DEFAULT_CAKES));
-    cakes = MITU_DEFAULT_CAKES;
+  // Chỉ nạp bánh mẫu khi chưa có kho, dữ liệu hỏng, hoặc kho định dạng cũ (chưa có tag).
+  // Kho rỗng [] là do admin chủ động xóa → giữ nguyên, không nạp lại.
+  let cakes = null;
+  try { cakes = JSON.parse(localStorage.getItem("mitu_cakes")); } catch(e) { cakes = null; }
+  const isLegacy = Array.isArray(cakes) && cakes.length > 0 && !cakes.some(c => Array.isArray(c.audience));
+  if (!Array.isArray(cakes) || isLegacy) {
+    cakes = MITU_DEFAULT_CAKES.map(c => ({ ...c }));
+    localStorage.setItem("mitu_cakes", JSON.stringify(cakes));
+  }
+  // Kho cũ chưa từng có cờ "bán chạy" → gắn theo danh sách mặc định (chỉ một lần)
+  if (cakes.length > 0 && !cakes.some(c => "bestseller" in c)) {
+    const defaultBest = new Set(MITU_DEFAULT_CAKES.filter(c => c.bestseller).map(c => c.id));
+    cakes.forEach(c => { c.bestseller = defaultBest.has(c.id); });
+    localStorage.setItem("mitu_cakes", JSON.stringify(cakes));
   }
   // Ảnh mẫu đã chết (404) → thay bằng ảnh còn sống, kể cả trong kho đã lưu ở trình duyệt
   const DEAD_IMAGES = {
@@ -316,12 +328,10 @@ const MITU_DEFAULT_FEEDBACKS = [
     }
   });
   if (fixedImages) localStorage.setItem("mitu_cakes", JSON.stringify(cakes));
-  // Khởi tạo menu hôm nay có toàn bộ bánh mẫu
-  let today = null;
-  try { today = JSON.parse(localStorage.getItem("mitu_today") || "null"); } catch(e) { today = null; }
-  const todayDate = new Date().toLocaleDateString("vi-VN");
-  if (!today || !today.ids || today.ids.length === 0) {
-    localStorage.setItem("mitu_today", JSON.stringify({ date: todayDate, ids: cakes.map(c => c.id) }));
+  // Lần đầu chạy (chưa từng có menu): coi như hôm nay có toàn bộ bánh mẫu.
+  // Sau đó menu hôm nay chỉ do admin chọn, không tự lấp lại bằng cả kho.
+  if (localStorage.getItem("mitu_today") === null) {
+    localStorage.setItem("mitu_today", JSON.stringify({ date: getTodayKey(), ids: cakes.map(c => c.id) }));
   }
 
   // Khởi tạo danh sách feedback nếu chưa có
@@ -343,7 +353,10 @@ function getConfig() {
  * Lấy toàn bộ kho bánh
  */
 function getCakes() {
-  return JSON.parse(localStorage.getItem("mitu_cakes") || "[]");
+  try {
+    const list = JSON.parse(localStorage.getItem("mitu_cakes") || "[]");
+    return Array.isArray(list) ? list : [];
+  } catch(e) { return []; }
 }
 
 /**
@@ -366,18 +379,31 @@ function saveFeedbacks(list) {
 }
 
 /**
- * Lấy menu hôm nay (danh sách ID)
+ * Khóa ngày theo giờ máy, dùng để so menu đã lưu có phải của hôm nay không
+ */
+function getTodayKey() {
+  return new Date().toLocaleDateString("vi-VN");
+}
+
+/**
+ * Menu đã lưu gần nhất (có thể là của ngày trước)
+ */
+function getSavedTodayMenu() {
+  try {
+    const saved = JSON.parse(localStorage.getItem("mitu_today") || "null");
+    if (saved && Array.isArray(saved.ids)) return { date: saved.date || "", ids: saved.ids };
+  } catch(e) {}
+  return { date: "", ids: [] };
+}
+
+/**
+ * Lấy menu hôm nay (danh sách ID). Menu của ngày trước không tính là hôm nay:
+ * trả ids rỗng để trang khách không hiện bánh hôm qua như bánh có sẵn.
  */
 function getTodayMenu() {
-  const today = JSON.parse(localStorage.getItem("mitu_today") || '{"date":"","ids":[]}');
-  const todayDate = new Date().toLocaleDateString("vi-VN");
-  if (today.date !== todayDate || !today.ids || today.ids.length === 0) {
-    const cakes = getCakes();
-    const updated = { date: todayDate, ids: cakes.map(c => c.id) };
-    localStorage.setItem("mitu_today", JSON.stringify(updated));
-    return updated;
-  }
-  return today;
+  const saved = getSavedTodayMenu();
+  const isToday = saved.date === getTodayKey();
+  return { date: saved.date, ids: isToday ? saved.ids : [], isToday };
 }
 
 /**

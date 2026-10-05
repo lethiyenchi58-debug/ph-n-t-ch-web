@@ -170,7 +170,12 @@ function renderInventory() {
   if (invFilter.search) {
     cakes = cakes.filter(c => c.name.toLowerCase().includes(invFilter.search));
   }
-  if (invFilter.cat !== "all") {
+  const todayIds = new Set(getTodayMenu().ids);
+  if (invFilter.cat === "__best") {
+    cakes = cakes.filter(c => c.bestseller);
+  } else if (invFilter.cat === "__today") {
+    cakes = cakes.filter(c => todayIds.has(c.id));
+  } else if (invFilter.cat !== "all") {
     cakes = cakes.filter(c => c.category === invFilter.cat);
   }
 
@@ -187,18 +192,21 @@ function renderInventory() {
 
   grid.innerHTML = "";
   cakes.forEach(cake => {
-    const card = createInvCard(cake);
+    const card = createInvCard(cake, todayIds.has(cake.id));
     grid.appendChild(card);
   });
 }
 
-function createInvCard(cake) {
+// inToday: theo menu đã LƯU cho hôm nay (không tính lựa chọn đang dở ở tab Menu hôm nay)
+function createInvCard(cake, inToday) {
   const div = document.createElement("div");
   div.className = "inv-card";
   const catLabel = getCatLabel(cake.category);
   div.innerHTML = `
     <div class="inv-card-img">
-      ${cake.image ? `<img src="${cake.image}" alt="${escH(cake.name)}" loading="lazy">` : "🎂"}
+      ${cake.image ? `<img src="${escH(cake.image)}" alt="${escH(cake.name)}" loading="lazy">` : "🎂"}
+      ${cake.bestseller ? `<span class="inv-badge is-best">★ Bán chạy</span>` : ""}
+      ${inToday ? `<span class="inv-badge">✓ Có hôm nay</span>` : ""}
     </div>
     <div class="inv-card-body">
       <div class="inv-card-name" title="${escH(cake.name)}">${escH(cake.name)}</div>
@@ -223,9 +231,9 @@ function confirmDeleteCake(id, name) {
     () => {
       allCakes = allCakes.filter(c => c.id !== id);
       saveCakes();
-      // Also remove from today if needed
+      // Gỡ khỏi menu hôm nay (cả bản đã lưu lẫn lựa chọn đang dở), không lưu hộ lựa chọn dở
       selectedToday.delete(id);
-      saveTodayToStorage();
+      removeFromSavedToday(id);
       renderInventory();
       renderTodayPanel();
       showToast("✅ Đã xóa bánh khỏi kho.", "success");
@@ -246,7 +254,9 @@ function initCakeModal() {
   document.getElementById("cakeModalClose")?.addEventListener("click", close);
   document.getElementById("cakeModalCancelBtn")?.addEventListener("click", close);
   modal?.addEventListener("click", e => { if (e.target === modal) close(); });
-  document.addEventListener("keydown", e => { if (e.key === "Escape") close(); });
+  document.addEventListener("keydown", e => {
+    if (e.key === "Escape" && modal?.classList.contains("show")) close();
+  });
 
   // Image upload
   const uploadArea = document.getElementById("imgUploadArea");
@@ -404,9 +414,13 @@ function saveCake() {
       createdAt: new Date().toISOString(),
     };
     allCakes.unshift(newCake);
-    selectedToday.add(newCake.id); // Add to today's menu by default
-    saveTodayToStorage();
-    showToast("✅ Đã thêm bánh mới vào kho!", "success");
+    // Bánh mới chỉ vào kho; có bán hôm nay hay không do admin chọn ở tab Menu hôm nay
+    showToast("✅ Đã thêm bánh mới vào kho! Chọn ở tab Menu hôm nay nếu có sẵn.", "success");
+  }
+
+  const bestCount = allCakes.filter(c => c.bestseller).length;
+  if (bestseller && bestCount > BESTSELLER_LIMIT) {
+    showToast(`⚠️ Đang có ${bestCount} bánh bán chạy, trang chủ chỉ hiện ${BESTSELLER_LIMIT} bánh đầu kho.`, "info");
   }
 
   saveCakes();
@@ -422,13 +436,15 @@ function saveCakes() {
 
 // ── TODAY PANEL ───────────────────────────────────────────────
 function initTodayPanel() {
-  // Load existing selections
-  const today = getTodayMenu();
-  today.ids.forEach(id => selectedToday.add(id));
+  // Nạp sẵn lựa chọn đã lưu gần nhất (kể cả của hôm trước) để chủ tiệm chỉ cần sửa rồi Lưu.
+  // Trang khách chỉ hiện menu khi đã Lưu cho đúng hôm nay.
+  getSavedTodayMenu().ids.forEach(id => selectedToday.add(id));
   updateTodayCount();
+  updateTodayHint();
 
   document.getElementById("saveTodayBtn")?.addEventListener("click", () => {
     saveTodayToStorage();
+    renderInventory();
     showToast(`✅ Đã lưu menu hôm nay! (${selectedToday.size} bánh)`, "success");
   });
 
@@ -502,8 +518,28 @@ function updateTodayCount() {
 }
 
 function saveTodayToStorage() {
-  const today = new Date().toLocaleDateString("vi-VN");
-  localStorage.setItem("mitu_today", JSON.stringify({ date: today, ids: [...selectedToday] }));
+  // Chỉ lưu ID còn trong kho
+  const ids = [...selectedToday].filter(id => allCakes.some(c => c.id === id));
+  localStorage.setItem("mitu_today", JSON.stringify({ date: getTodayKey(), ids }));
+  updateTodayHint();
+}
+
+// Gỡ một bánh khỏi menu đã lưu, giữ nguyên ngày của menu đó
+function removeFromSavedToday(id) {
+  const saved = getSavedTodayMenu();
+  if (!saved.ids.includes(id)) return;
+  localStorage.setItem("mitu_today", JSON.stringify({ date: saved.date, ids: saved.ids.filter(x => x !== id) }));
+}
+
+// Nhắc khi menu đang hiển thị là của hôm trước, chưa lưu cho hôm nay
+function updateTodayHint() {
+  const el = document.getElementById("todayHint");
+  if (!el) return;
+  const { isToday, date } = getTodayMenu();
+  el.classList.toggle("is-stale", !isToday);
+  el.textContent = isToday
+    ? "Chạm vào bánh tiệm có sẵn hôm nay, rồi bấm Lưu."
+    : `Chưa lưu menu cho hôm nay${date ? ` (đang hiện lựa chọn ngày ${date})` : ""}. Trang khách đang báo "đang cập nhật" – chọn lại rồi bấm Lưu.`;
 }
 
 // ── SETTINGS ─────────────────────────────────────────────────
@@ -546,10 +582,11 @@ function initSettings() {
 
   // Danger zone
   document.getElementById("clearTodayBtn")?.addEventListener("click", () => {
-    showConfirm("🗑️ Xóa menu hôm nay?", "Danh sách bánh hôm nay sẽ bị xóa, trang web sẽ không hiển thị bánh nào.", () => {
+    showConfirm("🗑️ Xóa menu hôm nay?", "Danh sách bánh hôm nay sẽ bị xóa, mục Menu hôm nay trên trang web sẽ báo đang cập nhật.", () => {
       selectedToday.clear();
       saveTodayToStorage();
       renderTodayPanel();
+      renderInventory();
       showToast("✅ Đã xóa menu hôm nay.", "success");
     });
   });
@@ -731,9 +768,9 @@ function renderFeedbackPanel() {
 
     card.querySelector(".btn-edit-fb").addEventListener("click", () => openFeedbackModal(fb.id));
     card.querySelector(".btn-delete-fb").addEventListener("click", () => {
-      confirmModal(
-        "Xóa ảnh Feedback",
-        `Bạn có chắc chắn muốn xóa phản hồi của "${fb.name}" không?`,
+      showConfirm(
+        "🗑️ Xóa ảnh Feedback?",
+        `Bạn có chắc chắn muốn xóa phản hồi của "<strong>${escH(fb.name)}</strong>" không?`,
         () => deleteFeedback(fb.id)
       );
     });

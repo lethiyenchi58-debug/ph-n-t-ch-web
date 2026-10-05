@@ -385,6 +385,8 @@
       font-size: 12.5px; font-weight: 700;
     }
     .today-hint { flex-basis: 100%; font-size: 13px; color: var(--cocoa-soft); }
+    .today-hint.is-stale { color: var(--cherry); font-weight: 700; }
+    .inv-badge.is-best { top: 8px; bottom: auto; background: var(--cherry); color: var(--white); }
     .today-select-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
     .today-select-card {
       background: var(--white);
@@ -813,6 +815,8 @@
         <input type="search" class="search-input" id="invSearch" placeholder="Tìm theo tên bánh" aria-label="Tìm theo tên bánh" />
         <select class="search-select" id="invCatFilter" aria-label="Lọc theo danh mục">
           <option value="all">Tất cả danh mục</option>
+          <option value="__best">★ Đang đánh dấu bán chạy</option>
+          <option value="__today">✓ Có trong menu hôm nay</option>
           <option value="birthday">Bánh sinh nhật</option>
           <option value="mini">Bánh Mini</option>
           <option value="fruit">Bánh Hoa quả</option>
@@ -843,7 +847,7 @@
       <div class="today-info-bar">
         <span class="today-date-text" id="todayPanelDate"></span>
         <span class="today-count-badge" id="todayCount">0 bánh đã chọn</span>
-        <span class="today-hint">Chạm vào bánh tiệm có sẵn hôm nay, rồi bấm Lưu.</span>
+        <span class="today-hint" id="todayHint">Chạm vào bánh tiệm có sẵn hôm nay, rồi bấm Lưu.</span>
       </div>
 
       <div class="today-select-grid" id="todaySelectGrid">
