@@ -21,19 +21,23 @@ let currentFilters = {
 
 // ── Init ─────────────────────────────────────────────────────
 document.addEventListener("DOMContentLoaded", () => {
-  applyConfig();
   renderTodayDate();
-  initCatalog();
-  renderBestsellers();
   initHeroSlider();
   initNav();
   initModal();
-  renderFeedbackSlider();
   initFeedbackLightbox();
   initTiktok();
   initSmoothScroll();
   buildDrips();
   initReveals();
+
+  // Phần cần dữ liệu: chờ db.js nạp xong từ Firestore
+  onMituData(() => {
+    applyConfig();
+    initCatalog();
+    renderBestsellers();
+    renderFeedbackSlider();
+  });
 });
 
 // ── Ảnh bánh hỏng link: thay bằng khung "Mitu" thay vì ô trống ──
@@ -373,7 +377,7 @@ function renderCategoryTiles() {
     const cover = cat === "all" ? "images/logo.png" : cakes.find(c => c.image)?.image;
     return `
       <button type="button" class="cat-tile${cat === "all" ? " cat-tile-all" : ""}" role="tab" data-cat="${cat}" aria-selected="false">
-        <span class="cat-tile-img">${cover ? `<img src="${escHtml(cover)}" alt="" loading="lazy" />` : ""}</span>
+        <span class="cat-tile-img">${cover ? `<img src="${escHtml(cdnImage(cover, 240))}" alt="" loading="lazy" />` : ""}</span>
         <span class="cat-tile-name">${label}</span>
         <span class="cat-tile-count">${cakes.length} mẫu</span>
       </button>`;
@@ -630,7 +634,7 @@ function renderBestsellers() {
       <button type="button" class="best-card-btn" data-id="${escHtml(cake.id)}"${isClone ? ' tabindex="-1"' : ` aria-label="Đặt ${escHtml(cake.name)}"`}>
         <span class="best-rank" aria-hidden="true">${i + 1}</span>
         <span class="best-img">
-          ${cake.image ? `<img src="${escHtml(cake.image)}" alt="" loading="lazy" />` : `<span class="cake-img-placeholder">Mitu</span>`}
+          ${cake.image ? `<img src="${escHtml(cdnImage(cake.image, 480))}" alt="" loading="lazy" />` : `<span class="cake-img-placeholder">Mitu</span>`}
         </span>
         <span class="best-info">
           <span class="best-cat">${escHtml(getCategoryLabel(cake.category))}</span>
@@ -725,7 +729,7 @@ function createCakeCard(cake, opts = {}) {
   const categoryLabel = getCategoryLabel(cake.category);
 
   const imgHTML = cake.image
-    ? `<img src="${escHtml(cake.image)}" alt="${escHtml(cake.name)}" loading="lazy" />`
+    ? `<img src="${escHtml(cdnImage(cake.image, 600))}" alt="${escHtml(cake.name)}" loading="lazy" />`
     : `<div class="cake-img-placeholder">Mitu</div>`;
 
   const flags = [];
@@ -1044,7 +1048,7 @@ function openOrderModal(cake) {
   // Image
   const imgBox = document.getElementById("modalCakeImg");
   imgBox.innerHTML = cake.image
-    ? `<img class="modal-cake-img" src="${escHtml(cake.image)}" alt="${escHtml(cake.name)}" />`
+    ? `<img class="modal-cake-img" src="${escHtml(cdnImage(cake.image, 1000))}" alt="${escHtml(cake.name)}" />`
     : `<div class="modal-cake-placeholder">Mitu</div>`;
 
   document.getElementById("modalTitle").textContent = cake.name;
@@ -1138,7 +1142,7 @@ function createFeedbackCard(fb, originalIndex) {
 
   card.innerHTML = `
     <div class="feedback-img-wrapper" title="Nhấn để xem chi tiết ảnh">
-      <img src="${escHtml(fb.image)}" alt="${escHtml(fb.caption || fb.name)}" loading="lazy" />
+      <img src="${escHtml(cdnImage(fb.image, 700))}" alt="${escHtml(fb.caption || fb.name)}" loading="lazy" />
       <div class="feedback-zoom-hint">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14zM12 10h-2v2H9v-2H7V9h2V7h1v2h2v1z"/></svg>
         <span>Phóng to</span>
@@ -1185,7 +1189,7 @@ function openFeedbackLightbox(index) {
 
   if (!lightbox) return;
 
-  if (lbImg) lbImg.src = fb.image;
+  if (lbImg) lbImg.src = cdnImage(fb.image, 1400);
   if (lbCaption) lbCaption.textContent = fb.caption || fb.name || "Ảnh feedback từ khách hàng";
   if (lbQuote) lbQuote.textContent = fb.quote ? `${fb.quote} — ${fb.name}` : fb.name;
 

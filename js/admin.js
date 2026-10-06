@@ -1,20 +1,21 @@
 /**
  * TIỆM BÁNH MITU – admin.js
- * Toàn bộ logic trang quản trị
+ * Toàn bộ logic trang quản trị. Dữ liệu đọc từ MITU_STATE (config.js),
+ * ghi qua window.MituDB (db.js – Firestore), ảnh upload lên Cloudinary.
  */
 
 // ── State ─────────────────────────────────────────────────────
 let editingCakeId      = null;   // null = thêm mới, string = đang sửa
-let uploadedImgB64     = null;   // base64 ảnh đang upload
+let cakeImg            = { url: null, file: null }; // ảnh bánh: link đã có / file chờ upload
 let editingFeedbackId  = null;   // null = thêm mới, string = đang sửa
-let uploadedFbImgB64   = null;   // base64 ảnh feedback đang upload
-let selectedToday      = new Set(); // ID bánh chọn cho hôm nay
+let fbImg              = { url: null, file: null }; // ảnh feedback: tương tự
+let selectedToday      = new Set(); // ID bánh chọn cho hôm nay (chưa lưu)
 let allCakes           = [];
 let invFilter          = { search: "", cat: "all" };
+let layoutShown        = false;
 
 // ── Init ─────────────────────────────────────────────────────
 document.addEventListener("DOMContentLoaded", () => {
-  checkSession();
   initLogin();
   initSidebar();
   initTopbar();
@@ -24,61 +25,237 @@ document.addEventListener("DOMContentLoaded", () => {
   initSettings();
   initCakeModal();
   initLogout();
+
+  // Chờ dữ liệu Firestore rồi mới xét đăng nhập, để admin luôn thấy dữ liệu thật
+  onMituData(() => {
+    MituDB.onAuthChange(user => {
+      if (user) showAdminLayout(user);
+      else showLoginScreen();
+    });
+  });
 });
 
 // ── Session ───────────────────────────────────────────────────
-function checkSession() {
-  if (sessionStorage.getItem("mitu_logged_in") === "1") {
-    showAdminLayout();
-  }
+function showLoginScreen() {
+  layoutShown = false;
+  document.getElementById("loginScreen").style.display = "";
+  document.getElementById("adminLayout").classList.add("hidden");
 }
 
-function showAdminLayout() {
+function showAdminLayout(user) {
   document.getElementById("loginScreen").style.display = "none";
   document.getElementById("adminLayout").classList.remove("hidden");
+  const nameEl = document.getElementById("topbarName");
+  if (nameEl && user?.email) nameEl.textContent = user.email.split("@")[0];
+  if (layoutShown) return;
+  layoutShown = true;
+
+  allCakes = getCakes();
+  // Nạp sẵn lựa chọn đã lưu gần nhất (kể cả của hôm trước) để chủ tiệm chỉ cần sửa rồi Lưu
+  selectedToday = new Set(getSavedTodayMenu().ids);
+  renderAll();
+  loadSettings();
+  updateTopbarDate();
+  renderDataBanner();
+}
+
+function renderAll() {
   allCakes = getCakes();
   renderInventory();
   renderTodayPanel();
   renderFeedbackPanel();
-  loadSettings();
-  updateTopbarDate();
+  updateTodayHint();
 }
 
 // ── Login ─────────────────────────────────────────────────────
 function initLogin() {
   const form = document.getElementById("loginForm");
-  form?.addEventListener("submit", e => {
+  form?.addEventListener("submit", async e => {
     e.preventDefault();
-    const user     = document.getElementById("loginUser").value.trim();
-    const pass     = document.getElementById("loginPass").value;
-    const savedUser = localStorage.getItem("mitu_admin_user") || "admin";
-    const savedPass = localStorage.getItem("mitu_admin_pass") || "mitu2024";
-    const errEl     = document.getElementById("loginError");
+    const email  = document.getElementById("loginUser").value.trim();
+    const pass   = document.getElementById("loginPass").value;
+    const errEl  = document.getElementById("loginError");
+    const btn    = form.querySelector('button[type="submit"]');
 
-    if (user === savedUser && pass === savedPass) {
-      sessionStorage.setItem("mitu_logged_in", "1");
+    btn.disabled = true;
+    try {
+      await MituDB.signIn(email, pass);
       errEl.classList.remove("show");
-      showAdminLayout();
-    } else {
+      // onAuthChange sẽ mở trang quản trị
+    } catch (err) {
+      errEl.textContent = err?.code === "auth/too-many-requests"
+        ? "Đăng nhập sai quá nhiều lần. Đợi vài phút rồi thử lại."
+        : err?.code === "auth/network-request-failed"
+          ? "Không có mạng. Kiểm tra kết nối rồi thử lại."
+          : "Sai email hoặc mật khẩu. Kiểm tra lại rồi thử lần nữa.";
       errEl.classList.add("show");
       document.getElementById("loginPass").value = "";
+    } finally {
+      btn.disabled = false;
     }
-  });
-
-  // Press Enter on password
-  document.getElementById("loginPass")?.addEventListener("keydown", e => {
-    if (e.key === "Enter") document.getElementById("loginForm").dispatchEvent(new Event("submit"));
   });
 }
 
 // ── Logout ────────────────────────────────────────────────────
 function initLogout() {
-  const logout = () => {
-    sessionStorage.removeItem("mitu_logged_in");
+  const logout = async () => {
+    await MituDB.signOut();
     location.reload();
   };
   document.getElementById("logoutBtn")?.addEventListener("click", logout);
   document.getElementById("topbarLogoutBtn")?.addEventListener("click", logout);
+}
+
+// ── Ghi dữ liệu: báo lỗi dễ hiểu cho chủ tiệm ─────────────────
+function writeErrorMsg(err) {
+  console.error("[Mitu] Lỗi ghi dữ liệu:", err);
+  if (err?.code === "permission-denied") return "❌ Tài khoản này không có quyền sửa dữ liệu. Kiểm tra email admin trong firestore.rules (node setup.js) rồi deploy lại rules.";
+  if (err?.code === "unavailable" || err?.code === "auth/network-request-failed") return "❌ Mất kết nối mạng, chưa lưu được. Thử lại nhé.";
+  if (err?.message?.startsWith("cloudinary: chưa")) return "❌ Chưa cấu hình Cloudinary nên chưa upload ảnh được (chạy node setup.js).";
+  if (err?.message?.startsWith("cloudinary")) return `❌ Upload ảnh thất bại (${err.message.slice(12)}). Kiểm tra preset Unsigned trên Cloudinary.`;
+  return "❌ Có lỗi, chưa lưu được. Thử lại nhé.";
+}
+
+// Khóa nút trong lúc chờ ghi, tránh bấm hai lần
+async function withBusy(btn, fn) {
+  if (btn) btn.disabled = true;
+  try { return await fn(); }
+  finally { if (btn) btn.disabled = false; }
+}
+
+// ── Upload ảnh lên Cloudinary (preset Unsigned) ───────────────
+async function uploadImage(file) {
+  const { cloudName, uploadPreset } = MITU_CLOUDINARY;
+  if (!cloudName) throw new Error("cloudinary: chưa điền cloudName trong js/config.js");
+  const form = new FormData();
+  form.append("file", file);
+  form.append("upload_preset", uploadPreset);
+  const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, { method: "POST", body: form });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data.secure_url) throw new Error(`cloudinary: ${data.error?.message || res.status}`);
+  return data.secure_url;
+}
+
+function checkImageFile(file) {
+  if (!file.type.startsWith("image/")) { showToast("❌ Vui lòng chọn file ảnh.", "error"); return false; }
+  if (file.size > 5 * 1024 * 1024) { showToast("❌ File quá lớn! Tối đa 5MB.", "error"); return false; }
+  return true;
+}
+
+// ── Banner trạng thái dữ liệu & khởi tạo lần đầu ──────────────
+function renderDataBanner() {
+  const el = document.getElementById("dataBanner");
+  if (!el) return;
+
+  if (MITU_STATE.error) {
+    el.className = "data-banner is-error";
+    el.innerHTML = MITU_STATE.error.code === "permission-denied"
+      ? `<p><strong>Firestore đang chặn đọc dữ liệu.</strong> Chưa deploy quy tắc bảo mật: chạy <code>node setup.js</code> rồi <code>firebase deploy --only firestore:rules</code>, sau đó tải lại trang.</p>
+        <button type="button" class="btn btn-secondary" onclick="location.reload()">Tải lại</button>`
+      : `<p><strong>Không tải được dữ liệu.</strong> Đang hiện dữ liệu mẫu, đừng chỉnh sửa lúc này. Kiểm tra mạng rồi tải lại trang.</p>
+        <button type="button" class="btn btn-secondary" onclick="location.reload()">Tải lại</button>`;
+    return;
+  }
+
+  // Thiếu Cloudinary: vẫn sửa được chữ, chỉ chưa upload ảnh được
+  const cloudNote = MITU_CLOUDINARY.cloudName ? "" :
+    `<p><strong>Chưa cấu hình Cloudinary</strong> nên chưa upload ảnh được. Chạy <code>node setup.js</code> để điền Cloud name.</p>`;
+
+  if (MITU_STATE.initialized) {
+    el.className = cloudNote ? "data-banner" : "data-banner hidden";
+    el.innerHTML = cloudNote;
+    return;
+  }
+
+  const legacy = readLegacyLocalData();
+  const legacyImages = legacy
+    ? [...legacy.cakes, ...legacy.feedbacks].filter(x => String(x.image || "").startsWith("data:")).length
+    : 0;
+  el.className = "data-banner";
+  el.innerHTML = `${cloudNote}${legacyImages && cloudNote
+      ? `<p>⚠️ Dữ liệu cũ có ${legacyImages} ảnh tự upload. Cấu hình Cloudinary <strong>trước</strong> khi chuyển, nếu không các ảnh này sẽ bị bỏ.</p>` : ""}
+    <p><strong>Chưa có dữ liệu trên máy chủ.</strong> ${legacy
+      ? `Trình duyệt này còn dữ liệu cũ (${legacy.cakes.length} bánh, ${legacy.feedbacks.length} feedback). Bấm để chuyển lên máy chủ.`
+      : "Bấm để nạp bánh mẫu, feedback mẫu và thông tin tiệm, sau đó sửa dần."}</p>
+    <button type="button" class="btn btn-primary" id="initDataBtn">${legacy ? "Chuyển dữ liệu cũ lên" : "Khởi tạo dữ liệu"}</button>`;
+
+  document.getElementById("initDataBtn").addEventListener("click", e => {
+    withBusy(e.currentTarget, () => initFirestoreData(legacy)).catch(err => showToast(writeErrorMsg(err), "error"));
+  });
+}
+
+// Dữ liệu cũ lưu trong localStorage (trước khi chuyển sang Firestore)
+function readLegacyLocalData() {
+  try {
+    const cakes = JSON.parse(localStorage.getItem("mitu_cakes") || "null");
+    if (!Array.isArray(cakes) || cakes.length === 0) return null;
+    const feedbacks = JSON.parse(localStorage.getItem("mitu_feedbacks") || "null");
+    const config    = JSON.parse(localStorage.getItem("mitu_config") || "null");
+    return {
+      cakes,
+      feedbacks: Array.isArray(feedbacks) ? feedbacks : MITU_DEFAULT_FEEDBACKS,
+      config: config && typeof config === "object" ? config : {},
+    };
+  } catch (e) { return null; }
+}
+
+// Ảnh base64 (kiểu lưu cũ) không đưa vào Firestore được → upload lên Cloudinary nếu đã cấu hình
+async function migrateImage(image) {
+  if (typeof image !== "string" || !image.startsWith("data:")) return image || null;
+  if (!MITU_CLOUDINARY.cloudName) return null;
+  try {
+    const blob = await (await fetch(image)).blob();
+    return await uploadImage(blob);
+  } catch (e) {
+    console.warn("[Mitu] Bỏ qua ảnh không upload được:", e);
+    return null;
+  }
+}
+
+async function initFirestoreData(legacy) {
+  const src = legacy || { cakes: MITU_DEFAULT_CAKES, feedbacks: MITU_DEFAULT_FEEDBACKS, config: {} };
+  const base = Date.now();
+  // createdAt giảm dần để giữ nguyên thứ tự hiện tại
+  const stamp = i => new Date(base - i * 1000).toISOString();
+  let lostImages = 0;
+
+  const cakes = [];
+  for (const [i, c] of src.cakes.entries()) {
+    const image = await migrateImage(c.image);
+    if (c.image && !image) lostImages++;
+    cakes.push({
+      id: String(c.id || generateId()),
+      name: c.name || "Bánh chưa đặt tên",
+      price: Number(c.price) || 0,
+      category: c.category || "birthday",
+      audience: Array.isArray(c.audience) ? c.audience : [],
+      type: Array.isArray(c.type) ? c.type : [],
+      style: Array.isArray(c.style) ? c.style : [],
+      bestseller: !!c.bestseller,
+      desc: c.desc || c.description || "",
+      image,
+      createdAt: c.createdAt || stamp(i),
+    });
+  }
+
+  const feedbacks = [];
+  for (const [i, f] of src.feedbacks.entries()) {
+    const image = await migrateImage(f.image);
+    if (f.image && !image) lostImages++;
+    feedbacks.push({ ...f, id: String(f.id || "fb-" + generateId()), image, createdAt: f.createdAt || stamp(i) });
+  }
+
+  const { adminUser, adminPass, ...cfg } = { ...MITU_DEFAULTS, ...src.config };
+  const today = { date: getTodayKey(), ids: cakes.map(c => c.id) };
+
+  await MituDB.replaceAll({ cakes, feedbacks, config: cfg, today });
+  selectedToday = new Set(today.ids);
+  renderAll();
+  loadSettings();
+  renderDataBanner();
+  showToast(lostImages
+    ? `✅ Đã khởi tạo dữ liệu. ${lostImages} ảnh tải lên chưa được, hãy sửa bánh để chọn lại ảnh.`
+    : "✅ Đã khởi tạo dữ liệu trên máy chủ!", "success");
 }
 
 // ── Sidebar ───────────────────────────────────────────────────
@@ -135,8 +312,6 @@ function initSidebar() {
 // ── Topbar ────────────────────────────────────────────────────
 function initTopbar() {
   updateTopbarDate();
-  const cfg = getConfig();
-  // topbar name from config if needed
 }
 
 function updateTopbarDate() {
@@ -204,17 +379,17 @@ function createInvCard(cake, inToday) {
   const catLabel = getCatLabel(cake.category);
   div.innerHTML = `
     <div class="inv-card-img">
-      ${cake.image ? `<img src="${escH(cake.image)}" alt="${escH(cake.name)}" loading="lazy">` : "🎂"}
+      ${cake.image ? `<img src="${escH(cdnImage(cake.image, 400))}" alt="${escH(cake.name)}" loading="lazy">` : "🎂"}
       ${cake.bestseller ? `<span class="inv-badge is-best">★ Bán chạy</span>` : ""}
       ${inToday ? `<span class="inv-badge">✓ Có hôm nay</span>` : ""}
     </div>
     <div class="inv-card-body">
       <div class="inv-card-name" title="${escH(cake.name)}">${escH(cake.name)}</div>
       <div class="inv-card-price">${formatPrice(cake.price)}</div>
-      <span class="inv-card-cat">${catLabel}</span>
+      <span class="inv-card-cat">${escH(catLabel)}</span>
       <div class="inv-card-actions">
-        <button class="btn btn-sm btn-secondary" data-action="edit" data-id="${cake.id}">✏️ Sửa</button>
-        <button class="btn btn-sm btn-danger" data-action="delete" data-id="${cake.id}">🗑️</button>
+        <button class="btn btn-sm btn-secondary" data-action="edit">✏️ Sửa</button>
+        <button class="btn btn-sm btn-danger" data-action="delete">🗑️</button>
       </div>
     </div>`;
 
@@ -228,15 +403,16 @@ function confirmDeleteCake(id, name) {
   showConfirm(
     "🗑️ Xóa bánh?",
     `Bạn có chắc muốn xóa "<strong>${escH(name)}</strong>" khỏi kho không?<br><small>Hành động này không thể hoàn tác.</small>`,
-    () => {
-      allCakes = allCakes.filter(c => c.id !== id);
-      saveCakes();
-      // Gỡ khỏi menu hôm nay (cả bản đã lưu lẫn lựa chọn đang dở), không lưu hộ lựa chọn dở
-      selectedToday.delete(id);
-      removeFromSavedToday(id);
-      renderInventory();
-      renderTodayPanel();
-      showToast("✅ Đã xóa bánh khỏi kho.", "success");
+    async () => {
+      try {
+        // Gỡ khỏi kho và khỏi menu hôm nay đã lưu; lựa chọn đang dở chỉ bỏ bánh này
+        await MituDB.deleteCake(id);
+        selectedToday.delete(id);
+        renderAll();
+        showToast("✅ Đã xóa bánh khỏi kho.", "success");
+      } catch (err) {
+        showToast(writeErrorMsg(err), "error");
+      }
     }
   );
 }
@@ -279,9 +455,8 @@ function initCakeModal() {
 
   document.getElementById("removeImgBtn")?.addEventListener("click", e => {
     e.stopPropagation();
-    uploadedImgB64 = null;
-    document.getElementById("imgUploadPreview").classList.remove("show");
-    document.getElementById("imgUploadDefault").style.display = "";
+    setCakeImagePreview(null);
+    cakeImg = { url: null, file: null };
     fileInput.value = "";
   });
 
@@ -298,28 +473,25 @@ function initCakeModal() {
   });
 }
 
+function setCakeImagePreview(src) {
+  const prev = document.getElementById("imgPreviewEl");
+  if (prev.src.startsWith("blob:")) URL.revokeObjectURL(prev.src);
+  prev.src = src || "";
+  document.getElementById("imgUploadPreview").classList.toggle("show", !!src);
+  document.getElementById("imgUploadDefault").style.display = src ? "none" : "";
+}
+
+// Chỉ xem trước; upload thật khi bấm Lưu
 function handleImageFile(file) {
-  if (file.size > 5 * 1024 * 1024) {
-    showToast("❌ File quá lớn! Tối đa 5MB.", "error");
-    return;
-  }
-  if (!file.type.startsWith("image/")) {
-    showToast("❌ Vui lòng chọn file ảnh.", "error");
-    return;
-  }
-  const reader = new FileReader();
-  reader.onload = ev => {
-    uploadedImgB64 = ev.target.result;
-    document.getElementById("imgPreviewEl").src = uploadedImgB64;
-    document.getElementById("imgUploadPreview").classList.add("show");
-    document.getElementById("imgUploadDefault").style.display = "none";
-  };
-  reader.readAsDataURL(file);
+  if (!checkImageFile(file)) return;
+  cakeImg = { url: null, file };
+  setCakeImagePreview(URL.createObjectURL(file));
 }
 
 function openCakeModal(id) {
   editingCakeId = id;
   resetCakeForm();
+  editingCakeId = id;
 
   const modal = document.getElementById("cakeModal");
   document.getElementById("cakeModalTitle").textContent = id ? "✏️ Sửa thông tin bánh" : "➕ Thêm bánh mới";
@@ -346,10 +518,8 @@ function openCakeModal(id) {
     document.getElementById("cakeBestseller").checked = !!cake.bestseller;
 
     if (cake.image) {
-      uploadedImgB64 = cake.image;
-      document.getElementById("imgPreviewEl").src = cake.image;
-      document.getElementById("imgUploadPreview").classList.add("show");
-      document.getElementById("imgUploadDefault").style.display = "none";
+      cakeImg = { url: cake.image, file: null };
+      setCakeImagePreview(cdnImage(cake.image, 600));
     }
   }
 
@@ -360,10 +530,8 @@ function openCakeModal(id) {
 function resetCakeForm() {
   document.getElementById("cakeForm").reset();
   document.getElementById("cakeId").value = "";
-  uploadedImgB64 = null;
-  document.getElementById("imgUploadPreview").classList.remove("show");
-  document.getElementById("imgUploadDefault").style.display = "";
-  document.getElementById("imgPreviewEl").src = "";
+  cakeImg = { url: null, file: null };
+  setCakeImagePreview(null);
   document.getElementById("imgFileInput").value = "";
   editingCakeId = null;
 
@@ -372,7 +540,7 @@ function resetCakeForm() {
   });
 }
 
-function saveCake() {
+async function saveCake() {
   const name     = document.getElementById("cakeName").value.trim();
   const price    = parseFloat(document.getElementById("cakePrice").value);
   const category = document.getElementById("cakeCategory").value;
@@ -387,71 +555,60 @@ function saveCake() {
   if (!name) { showToast("❌ Vui lòng nhập tên bánh.", "error"); return; }
   if (isNaN(price) || price < 0) { showToast("❌ Vui lòng nhập giá hợp lệ.", "error"); return; }
 
-  if (editingCakeId) {
-    // Update existing
-    const idx = allCakes.findIndex(c => c.id === editingCakeId);
-    if (idx !== -1) {
-      allCakes[idx] = {
-        ...allCakes[idx],
-        name, price, category,
-        description: desc,
-        desc: desc,
-        audience, type, style, bestseller,
-        image: uploadedImgB64 !== null ? uploadedImgB64 : allCakes[idx].image,
-        updatedAt: new Date().toISOString(),
-      };
-    }
-    showToast("✅ Đã cập nhật bánh thành công!", "success");
-  } else {
-    // Add new
-    const newCake = {
-      id: generateId(),
-      name, price, category,
-      description: desc,
-      desc: desc,
-      audience, type, style, bestseller,
-      image: uploadedImgB64 || null,
-      createdAt: new Date().toISOString(),
-    };
-    allCakes.unshift(newCake);
-    // Bánh mới chỉ vào kho; có bán hôm nay hay không do admin chọn ở tab Menu hôm nay
-    showToast("✅ Đã thêm bánh mới vào kho! Chọn ở tab Menu hôm nay nếu có sẵn.", "success");
+  const btn = document.querySelector('#cakeForm button[type="submit"]');
+  const existing = editingCakeId ? allCakes.find(c => c.id === editingCakeId) : null;
+
+  try {
+    await withBusy(btn, async () => {
+      let image = cakeImg.url;
+      if (cakeImg.file) {
+        showToast("⏳ Đang tải ảnh lên…", "info");
+        image = await uploadImage(cakeImg.file);
+      }
+      const now = new Date().toISOString();
+      const cake = existing
+        ? { ...existing, name, price, category, desc, audience, type, style, bestseller, image, updatedAt: now }
+        : { id: generateId(), name, price, category, desc, audience, type, style, bestseller, image, createdAt: now };
+      delete cake.description; // trường cũ, đã gộp vào desc
+
+      // Bánh mới chỉ vào kho; có bán hôm nay hay không do admin chọn ở tab Menu hôm nay
+      await MituDB.saveCake(cake);
+    });
+  } catch (err) {
+    showToast(writeErrorMsg(err), "error");
+    return;
   }
 
-  const bestCount = allCakes.filter(c => c.bestseller).length;
+  showToast(existing
+    ? "✅ Đã cập nhật bánh thành công!"
+    : "✅ Đã thêm bánh mới vào kho! Chọn ở tab Menu hôm nay nếu có sẵn.", "success");
+
+  const bestCount = getCakes().filter(c => c.bestseller).length;
   if (bestseller && bestCount > BESTSELLER_LIMIT) {
-    showToast(`⚠️ Đang có ${bestCount} bánh bán chạy, trang chủ chỉ hiện ${BESTSELLER_LIMIT} bánh đầu kho.`, "info");
+    showToast(`⚠️ Đang có ${bestCount} bánh bán chạy, trang chủ chỉ hiện ${BESTSELLER_LIMIT} bánh mới nhất.`, "info");
   }
 
-  saveCakes();
-  renderInventory();
-  renderTodayPanel();
+  renderAll();
   document.getElementById("cakeModal").classList.remove("show");
   resetCakeForm();
 }
 
-function saveCakes() {
-  localStorage.setItem("mitu_cakes", JSON.stringify(allCakes));
-}
-
 // ── TODAY PANEL ───────────────────────────────────────────────
 function initTodayPanel() {
-  // Nạp sẵn lựa chọn đã lưu gần nhất (kể cả của hôm trước) để chủ tiệm chỉ cần sửa rồi Lưu.
-  // Trang khách chỉ hiện menu khi đã Lưu cho đúng hôm nay.
-  getSavedTodayMenu().ids.forEach(id => selectedToday.add(id));
-  updateTodayCount();
-  updateTodayHint();
-
-  document.getElementById("saveTodayBtn")?.addEventListener("click", () => {
-    saveTodayToStorage();
-    renderInventory();
-    showToast(`✅ Đã lưu menu hôm nay! (${selectedToday.size} bánh)`, "success");
+  document.getElementById("saveTodayBtn")?.addEventListener("click", async e => {
+    try {
+      await withBusy(e.currentTarget, () => saveTodayToStorage());
+      renderInventory();
+      showToast(`✅ Đã lưu menu hôm nay! (${selectedToday.size} bánh)`, "success");
+    } catch (err) {
+      showToast(writeErrorMsg(err), "error");
+    }
   });
 
   document.getElementById("deselectAllBtn")?.addEventListener("click", () => {
     selectedToday.clear();
     renderTodayPanel();
-    showToast("🗑️ Đã bỏ chọn tất cả.", "info");
+    showToast("🗑️ Đã bỏ chọn tất cả. Bấm Lưu để áp dụng.", "info");
   });
 
   // Set date
@@ -473,6 +630,7 @@ function renderTodayPanel() {
         <h3>Kho bánh trống</h3>
         <p>Hãy thêm bánh vào kho trước nhé!</p>
       </div>`;
+    updateTodayCount();
     return;
   }
 
@@ -492,7 +650,7 @@ function createTodayCard(cake) {
 
   div.innerHTML = `
     <div class="today-card-img" style="position:relative">
-      ${cake.image ? `<img src="${cake.image}" alt="${escH(cake.name)}" loading="lazy" />` : "🎂"}
+      ${cake.image ? `<img src="${escH(cdnImage(cake.image, 300))}" alt="${escH(cake.name)}" loading="lazy" />` : "🎂"}
       <div class="today-card-check">✓</div>
     </div>
     <div class="today-card-name" title="${escH(cake.name)}">${escH(cake.name)}</div>
@@ -514,21 +672,17 @@ function createTodayCard(cake) {
 
 function updateTodayCount() {
   const el = document.getElementById("todayCount");
-  if (el) el.textContent = `${selectedToday.size} bánh đã chọn`;
+  // Chỉ đếm bánh còn trong kho
+  const n = [...selectedToday].filter(id => allCakes.some(c => c.id === id)).length;
+  if (el) el.textContent = `${n} bánh đã chọn`;
 }
 
-function saveTodayToStorage() {
+async function saveTodayToStorage() {
   // Chỉ lưu ID còn trong kho
   const ids = [...selectedToday].filter(id => allCakes.some(c => c.id === id));
-  localStorage.setItem("mitu_today", JSON.stringify({ date: getTodayKey(), ids }));
+  await MituDB.saveToday(ids);
+  selectedToday = new Set(ids);
   updateTodayHint();
-}
-
-// Gỡ một bánh khỏi menu đã lưu, giữ nguyên ngày của menu đó
-function removeFromSavedToday(id) {
-  const saved = getSavedTodayMenu();
-  if (!saved.ids.includes(id)) return;
-  localStorage.setItem("mitu_today", JSON.stringify({ date: saved.date, ids: saved.ids.filter(x => x !== id) }));
 }
 
 // Nhắc khi menu đang hiển thị là của hôm trước, chưa lưu cho hôm nay
@@ -545,64 +699,90 @@ function updateTodayHint() {
 // ── SETTINGS ─────────────────────────────────────────────────
 function initSettings() {
   // Shop info form
-  document.getElementById("shopInfoForm")?.addEventListener("submit", e => {
+  document.getElementById("shopInfoForm")?.addEventListener("submit", async e => {
     e.preventDefault();
     const cfg = getConfig();
+    const val = id => document.getElementById(id)?.value.trim();
     const updated = {
       ...cfg,
-      shopName:    document.getElementById("s-shopName").value.trim() || cfg.shopName,
-      shopPhone:   document.getElementById("s-shopPhone").value.trim() || cfg.shopPhone,
-      zaloPhone:   document.getElementById("s-zaloPhone").value.trim() || cfg.zaloPhone,
-      shopSlogan:  document.getElementById("s-shopSlogan").value.trim() || cfg.shopSlogan,
-      shopAddress: document.getElementById("s-shopAddress").value.trim() || cfg.shopAddress,
-      facebookUrl: document.getElementById("s-facebookUrl").value.trim() || cfg.facebookUrl,
-      tiktokUrl:   document.getElementById("s-tiktokUrl")?.value.trim() || cfg.tiktokUrl || "https://www.tiktok.com/@tiembanhmitu",
-      instagramUrl: document.getElementById("s-instagramUrl")?.value.trim() || cfg.instagramUrl || "https://www.instagram.com/tiembanh_mitu/",
+      shopName:     val("s-shopName")     || cfg.shopName,
+      shopPhone:    val("s-shopPhone")    || cfg.shopPhone,
+      zaloPhone:    val("s-zaloPhone")    || cfg.zaloPhone,
+      shopSlogan:   val("s-shopSlogan")   || cfg.shopSlogan,
+      shopAddress:  val("s-shopAddress")  || cfg.shopAddress,
+      facebookUrl:  val("s-facebookUrl")  || cfg.facebookUrl,
+      tiktokUrl:    val("s-tiktokUrl")    || cfg.tiktokUrl,
+      instagramUrl: val("s-instagramUrl") || cfg.instagramUrl,
     };
-    localStorage.setItem("mitu_config", JSON.stringify(updated));
-    showToast("✅ Đã lưu thông tin tiệm!", "success");
+    try {
+      await withBusy(e.submitter, () => MituDB.saveShop(updated));
+      renderDataBanner();
+      showToast("✅ Đã lưu thông tin tiệm!", "success");
+    } catch (err) {
+      showToast(writeErrorMsg(err), "error");
+    }
   });
 
-  // Change password form
-  document.getElementById("changePassForm")?.addEventListener("submit", e => {
+  // Change password form (Firebase Auth: phải nhập đúng mật khẩu hiện tại)
+  document.getElementById("changePassForm")?.addEventListener("submit", async e => {
     e.preventDefault();
     const cur     = document.getElementById("s-curPass").value;
     const newP    = document.getElementById("s-newPass").value;
     const confirm = document.getElementById("s-confirmPass").value;
-    const saved   = localStorage.getItem("mitu_admin_pass") || "mitu2024";
 
-    if (cur !== saved) { showToast("❌ Mật khẩu hiện tại không đúng!", "error"); return; }
-    if (newP.length < 6) { showToast("❌ Mật khẩu mới tối thiểu 6 ký tự!", "error"); return; }
+    if (newP.length < 8) { showToast("❌ Mật khẩu mới tối thiểu 8 ký tự!", "error"); return; }
     if (newP !== confirm) { showToast("❌ Xác nhận mật khẩu không khớp!", "error"); return; }
 
-    localStorage.setItem("mitu_admin_pass", newP);
-    document.getElementById("changePassForm").reset();
-    showToast("✅ Đã đổi mật khẩu thành công!", "success");
+    try {
+      await withBusy(e.submitter, () => MituDB.changePassword(cur, newP));
+      document.getElementById("changePassForm").reset();
+      showToast("✅ Đã đổi mật khẩu thành công!", "success");
+    } catch (err) {
+      const wrong = ["auth/wrong-password", "auth/invalid-credential"].includes(err?.code);
+      showToast(wrong ? "❌ Mật khẩu hiện tại không đúng!"
+        : err?.code === "auth/weak-password" ? "❌ Mật khẩu mới quá yếu."
+        : writeErrorMsg(err), "error");
+    }
+  });
+
+  // Sao lưu / khôi phục
+  document.getElementById("exportDataBtn")?.addEventListener("click", exportData);
+  const importInput = document.getElementById("importDataInput");
+  document.getElementById("importDataBtn")?.addEventListener("click", () => importInput?.click());
+  importInput?.addEventListener("change", () => {
+    const file = importInput.files[0];
+    importInput.value = "";
+    if (file) importData(file);
   });
 
   // Danger zone
   document.getElementById("clearTodayBtn")?.addEventListener("click", () => {
-    showConfirm("🗑️ Xóa menu hôm nay?", "Danh sách bánh hôm nay sẽ bị xóa, mục Menu hôm nay trên trang web sẽ báo đang cập nhật.", () => {
-      selectedToday.clear();
-      saveTodayToStorage();
-      renderTodayPanel();
-      renderInventory();
-      showToast("✅ Đã xóa menu hôm nay.", "success");
+    showConfirm("🗑️ Xóa menu hôm nay?", "Danh sách bánh hôm nay sẽ bị xóa, mục Menu hôm nay trên trang web sẽ báo đang cập nhật.", async () => {
+      try {
+        selectedToday.clear();
+        await saveTodayToStorage();
+        renderTodayPanel();
+        renderInventory();
+        showToast("✅ Đã xóa menu hôm nay.", "success");
+      } catch (err) {
+        showToast(writeErrorMsg(err), "error");
+      }
     });
   });
 
   document.getElementById("clearAllCakesBtn")?.addEventListener("click", () => {
     showConfirm(
       "⚠️ Xóa toàn bộ kho bánh?",
-      `Tất cả <strong>${allCakes.length} bánh</strong> trong kho sẽ bị xóa vĩnh viễn.<br><small>Hành động này KHÔNG thể hoàn tác!</small>`,
-      () => {
-        allCakes = [];
-        selectedToday.clear();
-        saveCakes();
-        saveTodayToStorage();
-        renderInventory();
-        renderTodayPanel();
-        showToast("✅ Đã xóa toàn bộ kho bánh.", "success");
+      `Tất cả <strong>${allCakes.length} bánh</strong> trong kho sẽ bị xóa vĩnh viễn.<br><small>Nên tải bản sao lưu trước. Hành động này KHÔNG thể hoàn tác!</small>`,
+      async () => {
+        try {
+          await MituDB.deleteAllCakes();
+          selectedToday.clear();
+          renderAll();
+          showToast("✅ Đã xóa toàn bộ kho bánh.", "success");
+        } catch (err) {
+          showToast(writeErrorMsg(err), "error");
+        }
       }
     );
   });
@@ -610,14 +790,72 @@ function initSettings() {
 
 function loadSettings() {
   const cfg = getConfig();
-  document.getElementById("s-shopName").value    = cfg.shopName || "";
-  document.getElementById("s-shopPhone").value   = cfg.shopPhone || "";
-  document.getElementById("s-zaloPhone").value   = cfg.zaloPhone || "";
-  document.getElementById("s-shopSlogan").value  = cfg.shopSlogan || "";
-  document.getElementById("s-shopAddress").value = cfg.shopAddress || "";
-  document.getElementById("s-facebookUrl").value = cfg.facebookUrl || "";
-  if (document.getElementById("s-tiktokUrl")) document.getElementById("s-tiktokUrl").value = cfg.tiktokUrl || "https://www.tiktok.com/@tiembanhmitu";
-  if (document.getElementById("s-instagramUrl")) document.getElementById("s-instagramUrl").value = cfg.instagramUrl || "https://www.instagram.com/tiembanh_mitu/";
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v || ""; };
+  set("s-shopName", cfg.shopName);
+  set("s-shopPhone", cfg.shopPhone);
+  set("s-zaloPhone", cfg.zaloPhone);
+  set("s-shopSlogan", cfg.shopSlogan);
+  set("s-shopAddress", cfg.shopAddress);
+  set("s-facebookUrl", cfg.facebookUrl);
+  set("s-tiktokUrl", cfg.tiktokUrl);
+  set("s-instagramUrl", cfg.instagramUrl);
+}
+
+// ── SAO LƯU / KHÔI PHỤC (thay cho backup tự động – cần gói Blaze) ──
+function exportData() {
+  const data = {
+    app: "mitu-backup",
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    config: getConfig(),
+    cakes: getCakes(),
+    feedbacks: getFeedbacks(),
+    today: getSavedTodayMenu(),
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `mitu-sao-luu-${new Date().toISOString().slice(0, 10)}.json`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  showToast("✅ Đã tải bản sao lưu về máy.", "success");
+}
+
+async function importData(file) {
+  let data;
+  try {
+    data = JSON.parse(await file.text());
+  } catch (e) {
+    showToast("❌ File không đọc được.", "error");
+    return;
+  }
+  if (data?.app !== "mitu-backup" || !Array.isArray(data.cakes) || !Array.isArray(data.feedbacks)) {
+    showToast("❌ Đây không phải file sao lưu của Mitu.", "error");
+    return;
+  }
+
+  showConfirm(
+    "♻️ Khôi phục dữ liệu?",
+    `Toàn bộ dữ liệu hiện tại sẽ được thay bằng bản sao lưu ngày <strong>${escH(String(data.exportedAt || "").slice(0, 10))}</strong>
+     (${data.cakes.length} bánh, ${data.feedbacks.length} feedback).`,
+    async () => {
+      try {
+        await MituDB.replaceAll({
+          config: data.config || {},
+          cakes: data.cakes.filter(c => c && c.id),
+          feedbacks: data.feedbacks.filter(f => f && f.id),
+          today: data.today && Array.isArray(data.today.ids) ? data.today : { date: "", ids: [] },
+        });
+        selectedToday = new Set(getSavedTodayMenu().ids);
+        renderAll();
+        loadSettings();
+        renderDataBanner();
+        showToast("✅ Đã khôi phục dữ liệu.", "success");
+      } catch (err) {
+        showToast(writeErrorMsg(err), "error");
+      }
+    }
+  );
 }
 
 // ── CONFIRM DIALOG ────────────────────────────────────────────
@@ -679,20 +917,14 @@ function initFeedbackPanel() {
 
   urlInput?.addEventListener("input", () => {
     const val = urlInput.value.trim();
-    if (val) {
-      uploadedFbImgB64 = null;
-      document.getElementById("fbImgPreviewEl").src = val;
-      document.getElementById("fbImgUploadPreview").classList.add("show");
-      document.getElementById("fbImgUploadDefault").style.display = "none";
-    }
+    fbImg = { url: val || null, file: null };
+    setFbImagePreview(val || null);
   });
 
   document.getElementById("removeFbImgBtn")?.addEventListener("click", e => {
     e.stopPropagation();
-    uploadedFbImgB64 = null;
-    document.getElementById("fbImgPreviewEl").src = "";
-    document.getElementById("fbImgUploadPreview").classList.remove("show");
-    document.getElementById("fbImgUploadDefault").style.display = "";
+    fbImg = { url: null, file: null };
+    setFbImagePreview(null);
     fileInput.value = "";
     if (urlInput) urlInput.value = "";
   });
@@ -704,25 +936,20 @@ function initFeedbackPanel() {
   });
 }
 
+function setFbImagePreview(src) {
+  const prev = document.getElementById("fbImgPreviewEl");
+  if (prev.src.startsWith("blob:")) URL.revokeObjectURL(prev.src);
+  prev.src = src || "";
+  document.getElementById("fbImgUploadPreview").classList.toggle("show", !!src);
+  document.getElementById("fbImgUploadDefault").style.display = src ? "none" : "";
+}
+
 function handleFbImageFile(file) {
-  if (file.size > 5 * 1024 * 1024) {
-    showToast("❌ File quá lớn! Tối đa 5MB.", "error");
-    return;
-  }
-  if (!file.type.startsWith("image/")) {
-    showToast("❌ Vui lòng chọn file ảnh.", "error");
-    return;
-  }
-  const reader = new FileReader();
-  reader.onload = ev => {
-    uploadedFbImgB64 = ev.target.result;
-    document.getElementById("fbImgPreviewEl").src = uploadedFbImgB64;
-    document.getElementById("fbImgUploadPreview").classList.add("show");
-    document.getElementById("fbImgUploadDefault").style.display = "none";
-    const urlInput = document.getElementById("fbImgUrl");
-    if (urlInput) urlInput.value = "";
-  };
-  reader.readAsDataURL(file);
+  if (!checkImageFile(file)) return;
+  fbImg = { url: null, file };
+  setFbImagePreview(URL.createObjectURL(file));
+  const urlInput = document.getElementById("fbImgUrl");
+  if (urlInput) urlInput.value = "";
 }
 
 function renderFeedbackPanel() {
@@ -746,7 +973,7 @@ function renderFeedbackPanel() {
     card.className = "inv-card";
 
     const imgHTML = fb.image
-      ? `<img src="${escH(fb.image)}" alt="${escH(fb.caption || fb.name)}" />`
+      ? `<img src="${escH(cdnImage(fb.image, 400))}" alt="${escH(fb.caption || fb.name)}" />`
       : `<div class="cake-img-placeholder">📸</div>`;
 
     card.innerHTML = `
@@ -760,8 +987,8 @@ function renderFeedbackPanel() {
         <div style="font-size:13px;font-weight:700;color:var(--secondary);margin-bottom:4px;line-height:1.4">“${escH(fb.quote)}”</div>
         <div style="font-size:12px;color:var(--text-light);line-height:1.4;margin-bottom:12px;flex:1">${escH(fb.context || fb.caption || "")}</div>
         <div class="inv-card-actions">
-          <button class="btn btn-sm btn-secondary btn-edit-fb" data-id="${fb.id}">✏️ Sửa</button>
-          <button class="btn btn-sm btn-danger btn-delete-fb" data-id="${fb.id}">🗑️ Xóa</button>
+          <button class="btn btn-sm btn-secondary btn-edit-fb">✏️ Sửa</button>
+          <button class="btn btn-sm btn-danger btn-delete-fb">🗑️ Xóa</button>
         </div>
       </div>
     `;
@@ -788,16 +1015,13 @@ function openFeedbackModal(id) {
 
   // Reset form
   document.getElementById("feedbackAdminForm").reset();
-  uploadedFbImgB64 = null;
-  document.getElementById("fbImgUploadPreview").classList.remove("show");
-  document.getElementById("fbImgUploadDefault").style.display = "";
-  document.getElementById("fbImgPreviewEl").src = "";
+  fbImg = { url: null, file: null };
+  setFbImagePreview(null);
   if (fileInput) fileInput.value = "";
 
   if (id) {
     title.textContent = "✏️ Sửa ảnh Feedback";
-    const feedbacks = getFeedbacks();
-    const fb = feedbacks.find(f => f.id === id);
+    const fb = getFeedbacks().find(f => f.id === id);
     if (!fb) return;
 
     document.getElementById("fbEditId").value = fb.id;
@@ -808,14 +1032,9 @@ function openFeedbackModal(id) {
     document.getElementById("fbContext").value = fb.context || fb.caption || "";
 
     if (fb.image) {
-      if (fb.image.startsWith("data:") || fb.image.startsWith("blob:")) {
-        uploadedFbImgB64 = fb.image;
-      } else if (urlInput) {
-        urlInput.value = fb.image;
-      }
-      document.getElementById("fbImgPreviewEl").src = fb.image;
-      document.getElementById("fbImgUploadPreview").classList.add("show");
-      document.getElementById("fbImgUploadDefault").style.display = "none";
+      fbImg = { url: fb.image, file: null };
+      if (urlInput) urlInput.value = fb.image;
+      setFbImagePreview(cdnImage(fb.image, 600));
     }
   } else {
     title.textContent = "➕ Thêm ảnh Feedback mới";
@@ -829,77 +1048,59 @@ function openFeedbackModal(id) {
 function closeFeedbackModal() {
   document.getElementById("feedbackAdminModal")?.classList.remove("show");
   editingFeedbackId = null;
-  uploadedFbImgB64 = null;
+  fbImg = { url: null, file: null };
 }
 
-function saveFeedback() {
+async function saveFeedback() {
   const name = document.getElementById("fbName").value.trim();
   const quote = document.getElementById("fbQuote").value.trim();
   const channel = document.getElementById("fbChannel").value.trim() || "💬 Phản hồi qua Zalo";
   const badge = document.getElementById("fbBadge").value.trim();
   const context = document.getElementById("fbContext").value.trim();
-  const urlInput = document.getElementById("fbImgUrl");
-  const imgUrlVal = urlInput ? urlInput.value.trim() : "";
 
   if (!name || !quote) {
     showToast("❌ Vui lòng nhập tên khách hàng và lời khen!", "error");
     return;
   }
-
-  const feedbacks = getFeedbacks();
-  let image = uploadedFbImgB64 || imgUrlVal;
-
-  if (!image && editingFeedbackId) {
-    const existing = feedbacks.find(f => f.id === editingFeedbackId);
-    if (existing) image = existing.image;
-  }
-
-  if (!image) {
+  if (!fbImg.url && !fbImg.file) {
     showToast("❌ Vui lòng tải lên ảnh hoặc nhập link ảnh!", "error");
     return;
   }
 
-  if (editingFeedbackId) {
-    const idx = feedbacks.findIndex(f => f.id === editingFeedbackId);
-    if (idx !== -1) {
-      feedbacks[idx] = {
-        ...feedbacks[idx],
-        name,
-        quote,
-        channel,
-        badge,
-        context,
-        caption: context || badge || name,
-        image
-      };
-      showToast("✅ Đã cập nhật ảnh Feedback!", "success");
-    }
-  } else {
-    const newFb = {
-      id: "fb-" + generateId(),
-      name,
-      quote,
-      channel,
-      badge,
-      context,
-      caption: context || badge || name,
-      image
-    };
-    feedbacks.unshift(newFb);
-    showToast("✅ Đã thêm ảnh Feedback mới!", "success");
+  const btn = document.querySelector('#feedbackAdminForm button[type="submit"]');
+  const existing = editingFeedbackId ? getFeedbacks().find(f => f.id === editingFeedbackId) : null;
+
+  try {
+    await withBusy(btn, async () => {
+      let image = fbImg.url;
+      if (fbImg.file) {
+        showToast("⏳ Đang tải ảnh lên…", "info");
+        image = await uploadImage(fbImg.file);
+      }
+      const fields = { name, quote, channel, badge, context, caption: context || badge || name, image };
+      const fb = existing
+        ? { ...existing, ...fields, updatedAt: new Date().toISOString() }
+        : { id: "fb-" + generateId(), ...fields, createdAt: new Date().toISOString() };
+      await MituDB.saveFeedback(fb);
+    });
+  } catch (err) {
+    showToast(writeErrorMsg(err), "error");
+    return;
   }
 
-  saveFeedbacks(feedbacks);
+  showToast(existing ? "✅ Đã cập nhật ảnh Feedback!" : "✅ Đã thêm ảnh Feedback mới!", "success");
   closeFeedbackModal();
   renderFeedbackPanel();
 }
 
-function deleteFeedback(id) {
-  let feedbacks = getFeedbacks();
-  feedbacks = feedbacks.filter(f => f.id !== id);
-  saveFeedbacks(feedbacks);
-  renderFeedbackPanel();
-  showToast("🗑️ Đã xóa ảnh Feedback!", "success");
+async function deleteFeedback(id) {
+  try {
+    await MituDB.deleteFeedback(id);
+    renderFeedbackPanel();
+    showToast("🗑️ Đã xóa ảnh Feedback!", "success");
+  } catch (err) {
+    showToast(writeErrorMsg(err), "error");
+  }
 }
 
 // ── UTILITIES ─────────────────────────────────────────────────

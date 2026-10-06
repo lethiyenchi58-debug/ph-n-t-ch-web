@@ -1,6 +1,7 @@
 /**
- * TIỆM BÁNH MITU – Cấu hình mặc định
- * Chủ tiệm có thể thay đổi trong trang Admin > Cài đặt
+ * TIỆM BÁNH MITU – Cấu hình & dữ liệu mặc định
+ * Dữ liệu thật nằm trên Firestore; các giá trị dưới đây là dữ liệu mẫu để khởi tạo
+ * lần đầu và là dự phòng khi không tải được Firestore.
  */
 const MITU_DEFAULTS = {
   shopName: "Tiệm bánh Mitu",
@@ -12,8 +13,6 @@ const MITU_DEFAULTS = {
   instagramUrl: "https://www.instagram.com/tiembanh_mitu/",
   mapsUrl: "https://www.google.com/maps/search/?api=1&query=173+V%E1%BA%A1n+Ph%C3%BAc+-+H%C3%A0+%C4%90%C3%B4ng%2C+H%C3%A0+N%E1%BB%99i",
   facebookUrl: "https://www.facebook.com/profile.php?id=100063580955032",
-  adminUser: "admin",
-  adminPass: "mitu2024",
 };
 
 // Số bánh tối đa ở băng chuyền "Bán chạy nhất" trên trang chủ
@@ -268,132 +267,79 @@ const MITU_DEFAULT_FEEDBACKS = [
     context: "Bánh kem trái tim phủ bột cacao viền sóng kem, gắn đèn neon chữ Love lung linh trong không gian tiệc tối lãng mạn."
   }
 ];
+// ── Firebase & Cloudinary ─────────────────────────────────────
+// firebaseConfig để công khai được: dữ liệu được bảo vệ bằng firestore.rules,
+// chỉ email admin đã đăng nhập mới ghi được.
+const MITU_FIREBASE = {
+  apiKey: "AIzaSyDIWNdqj1mpnrMLsS_n2xqCWnmmZ9UGFqk",
+  authDomain: "mitu-bakery.firebaseapp.com",
+  projectId: "mitu-bakery",
+  storageBucket: "mitu-bakery.firebasestorage.app",
+  messagingSenderId: "331245917351",
+  appId: "1:331245917351:web:3a06b06b443e849d98f782",
+};
 
-// Khởi tạo config nếu chưa có trong localStorage hoặc cập nhật nếu đang là giá trị mẫu cũ
-(function initConfig() {
-  const existing = localStorage.getItem("mitu_config");
-  let cfg = null;
-  if (existing) {
-    try { cfg = JSON.parse(existing); } catch(e) { cfg = null; }
-  }
+// Ảnh bánh & feedback upload lên Cloudinary (preset dạng Unsigned)
+const MITU_CLOUDINARY = {
+  cloudName: "m6hxzdix",       // Cloud name (Settings → API Keys), không phải tên hiển thị
+  uploadPreset: "mitu_upload",
+};
 
-  // Cập nhật nếu chưa có hoặc đang lưu thông tin mẫu cũ 0900000000 hoặc chưa có tiktokUrl
-  if (!cfg || cfg.shopPhone === "0900000000" || cfg.zaloPhone === "0900000000" || !cfg.shopAddress || cfg.shopAddress.includes("Địa chỉ tiệm bánh của bạn") || !cfg.tiktokUrl) {
-    const updatedCfg = {
-      ...cfg,
-      shopName: cfg?.shopName || MITU_DEFAULTS.shopName,
-      shopSlogan: cfg?.shopSlogan || MITU_DEFAULTS.shopSlogan,
-      shopAddress: MITU_DEFAULTS.shopAddress,
-      shopPhone: MITU_DEFAULTS.shopPhone,
-      zaloPhone: MITU_DEFAULTS.zaloPhone,
-      tiktokUrl: cfg?.tiktokUrl || MITU_DEFAULTS.tiktokUrl,
-      facebookUrl: cfg?.facebookUrl || MITU_DEFAULTS.facebookUrl,
-    };
-    localStorage.setItem("mitu_config", JSON.stringify(updatedCfg));
-  }
-  const existingPass = localStorage.getItem("mitu_admin_pass");
-  if (!existingPass) {
-    localStorage.setItem("mitu_admin_pass", MITU_DEFAULTS.adminPass);
-  }
-  const existingUser = localStorage.getItem("mitu_admin_user");
-  if (!existingUser) {
-    localStorage.setItem("mitu_admin_user", MITU_DEFAULTS.adminUser);
-  }
-  // Chỉ nạp bánh mẫu khi chưa có kho, dữ liệu hỏng, hoặc kho định dạng cũ (chưa có tag).
-  // Kho rỗng [] là do admin chủ động xóa → giữ nguyên, không nạp lại.
-  let cakes = null;
-  try { cakes = JSON.parse(localStorage.getItem("mitu_cakes")); } catch(e) { cakes = null; }
-  const isLegacy = Array.isArray(cakes) && cakes.length > 0 && !cakes.some(c => Array.isArray(c.audience));
-  if (!Array.isArray(cakes) || isLegacy) {
-    cakes = MITU_DEFAULT_CAKES.map(c => ({ ...c }));
-    localStorage.setItem("mitu_cakes", JSON.stringify(cakes));
-  }
-  // Kho cũ chưa từng có cờ "bán chạy" → gắn theo danh sách mặc định (chỉ một lần)
-  if (cakes.length > 0 && !cakes.some(c => "bestseller" in c)) {
-    const defaultBest = new Set(MITU_DEFAULT_CAKES.filter(c => c.bestseller).map(c => c.id));
-    cakes.forEach(c => { c.bestseller = defaultBest.has(c.id); });
-    localStorage.setItem("mitu_cakes", JSON.stringify(cakes));
-  }
-  // Ảnh mẫu đã chết (404) → thay bằng ảnh còn sống, kể cả trong kho đã lưu ở trình duyệt
-  const DEAD_IMAGES = {
-    "photo-1535141192574-5d4897c13136": "photo-1535254973040-607b474cb50d",
-  };
-  let fixedImages = false;
-  cakes.forEach(c => {
-    for (const [dead, alive] of Object.entries(DEAD_IMAGES)) {
-      if (typeof c.image === "string" && c.image.includes(dead)) {
-        c.image = c.image.replace(dead, alive);
-        fixedImages = true;
-      }
-    }
-  });
-  if (fixedImages) localStorage.setItem("mitu_cakes", JSON.stringify(cakes));
-  // Lần đầu chạy (chưa từng có menu): coi như hôm nay có toàn bộ bánh mẫu.
-  // Sau đó menu hôm nay chỉ do admin chọn, không tự lấp lại bằng cả kho.
-  if (localStorage.getItem("mitu_today") === null) {
-    localStorage.setItem("mitu_today", JSON.stringify({ date: getTodayKey(), ids: cakes.map(c => c.id) }));
-  }
+// ── Dữ liệu đang dùng (js/db.js nạp từ Firestore rồi phát sự kiện "mitu:data") ──
+// initialized = false: Firestore chưa có dữ liệu → trang khách tạm dùng dữ liệu mẫu,
+// admin sẽ thấy nút "Khởi tạo dữ liệu".
+const MITU_STATE = {
+  ready: false,
+  initialized: false,
+  error: null,
+  config: { ...MITU_DEFAULTS },
+  cakes: MITU_DEFAULT_CAKES.map(c => ({ ...c })),
+  feedbacks: MITU_DEFAULT_FEEDBACKS.map(f => ({ ...f })),
+  today: { date: "", ids: [] },
+};
 
-  // Khởi tạo danh sách feedback nếu chưa có
-  let feedbacks = null;
-  try { feedbacks = JSON.parse(localStorage.getItem("mitu_feedbacks") || "null"); } catch(e) { feedbacks = null; }
-  if (!feedbacks || !Array.isArray(feedbacks) || feedbacks.length === 0) {
-    localStorage.setItem("mitu_feedbacks", JSON.stringify(MITU_DEFAULT_FEEDBACKS));
-  }
-})();
+/**
+ * Chạy cb khi dữ liệu đã nạp xong (chạy ngay nếu đã nạp)
+ */
+function onMituData(cb) {
+  if (MITU_STATE.ready) cb();
+  else document.addEventListener("mitu:data", () => cb(), { once: true });
+}
 
 /**
  * Lấy config hiện tại
  */
 function getConfig() {
-  return JSON.parse(localStorage.getItem("mitu_config") || "{}");
+  return MITU_STATE.config;
 }
 
 /**
  * Lấy toàn bộ kho bánh
  */
 function getCakes() {
-  try {
-    const list = JSON.parse(localStorage.getItem("mitu_cakes") || "[]");
-    return Array.isArray(list) ? list : [];
-  } catch(e) { return []; }
+  return MITU_STATE.cakes;
 }
 
 /**
  * Lấy danh sách ảnh feedback khách hàng
  */
 function getFeedbacks() {
-  try {
-    const list = JSON.parse(localStorage.getItem("mitu_feedbacks") || "null");
-    if (Array.isArray(list) && list.length > 0) return list;
-  } catch(e) {}
-  localStorage.setItem("mitu_feedbacks", JSON.stringify(MITU_DEFAULT_FEEDBACKS));
-  return MITU_DEFAULT_FEEDBACKS;
+  return MITU_STATE.feedbacks;
 }
 
 /**
- * Lưu danh sách ảnh feedback khách hàng
- */
-function saveFeedbacks(list) {
-  localStorage.setItem("mitu_feedbacks", JSON.stringify(list || []));
-}
-
-/**
- * Khóa ngày theo giờ máy, dùng để so menu đã lưu có phải của hôm nay không
+ * Khóa ngày theo giờ Việt Nam, để máy admin và máy khách cùng hiểu "hôm nay"
  */
 function getTodayKey() {
-  return new Date().toLocaleDateString("vi-VN");
+  return new Date().toLocaleDateString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" });
 }
 
 /**
  * Menu đã lưu gần nhất (có thể là của ngày trước)
  */
 function getSavedTodayMenu() {
-  try {
-    const saved = JSON.parse(localStorage.getItem("mitu_today") || "null");
-    if (saved && Array.isArray(saved.ids)) return { date: saved.date || "", ids: saved.ids };
-  } catch(e) {}
-  return { date: "", ids: [] };
+  const saved = MITU_STATE.today;
+  return { date: saved?.date || "", ids: Array.isArray(saved?.ids) ? saved.ids : [] };
 }
 
 /**
@@ -407,6 +353,14 @@ function getTodayMenu() {
 }
 
 /**
+ * Ảnh Cloudinary: xin bản đã nén, đúng cỡ hiển thị. Ảnh nguồn khác giữ nguyên.
+ */
+function cdnImage(url, width) {
+  if (typeof url !== "string" || !url.includes("res.cloudinary.com") || !url.includes("/upload/")) return url;
+  return url.replace("/upload/", `/upload/f_auto,q_auto,c_limit,w_${width}/`);
+}
+
+/**
  * Format giá tiền VNĐ
  */
 function formatPrice(price) {
@@ -417,5 +371,5 @@ function formatPrice(price) {
  * Tạo ID ngẫu nhiên
  */
 function generateId() {
-  return Date.now().toString(36) + Math.random().toString(36).substr(2);
+  return Date.now().toString(36) + Math.random().toString(36).slice(2);
 }

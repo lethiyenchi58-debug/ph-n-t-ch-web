@@ -1,0 +1,9 @@
+# Web do Vercel phục vụ; các file dưới đây chỉ dùng trên máy dev / cho Firebase CLI,
+# không cần công khai (firestore.rules có chứa email admin).
+firebase.json
+.firebaserc
+firestore.rules
+setup.js
+server.ps1
+start.bat
+package-lock.json

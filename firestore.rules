@@ -1,0 +1,47 @@
+rules_version = '2';
+
+// Ai cũng đọc được (trang khách), chỉ email admin đã đăng nhập mới ghi được.
+// Muốn thêm/đổi người quản lý: chạy `node setup.js` rồi
+//   firebase deploy --only firestore:rules
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAdmin() {
+      return request.auth != null
+        && request.auth.token.email in [
+          "solomid917@gmail.com"
+        ];
+    }
+
+    function validCake() {
+      let d = request.resource.data;
+      return d.name is string && d.name.size() > 0 && d.name.size() <= 200
+        && d.price is number && d.price >= 0
+        && (d.image == null || (d.image is string && d.image.size() <= 2048));
+    }
+
+    function validFeedback() {
+      let d = request.resource.data;
+      return d.name is string && d.name.size() <= 200
+        && d.quote is string && d.quote.size() <= 1000
+        && d.image is string && d.image.size() <= 2048;
+    }
+
+    match /cakes/{cakeId} {
+      allow read: if true;
+      allow create, update: if isAdmin() && validCake();
+      allow delete: if isAdmin();
+    }
+
+    match /feedbacks/{fbId} {
+      allow read: if true;
+      allow create, update: if isAdmin() && validFeedback();
+      allow delete: if isAdmin();
+    }
+
+    match /settings/{docId} {
+      allow read: if true;
+      allow write: if isAdmin() && docId in ["shop", "today"];
+    }
+  }
+}
