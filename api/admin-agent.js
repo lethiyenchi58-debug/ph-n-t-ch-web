@@ -14,7 +14,12 @@
  *   GEMINI_MODEL    (tùy chọn)  mặc định gemini-3.8-flash
  */
 
-const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-3.8-flash";
+// gemini-3.6-flash: bản ổn định. (gemini-3.8-flash mới hơn nhưng hay quá tải với key miễn phí.)
+const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-3.6-flash";
+// Model dự phòng khi model chính quá tải / treo. Đặt GEMINI_FALLBACK_MODEL=none để tắt.
+const GEMINI_FALLBACK_MODEL = process.env.GEMINI_FALLBACK_MODEL === "none"
+  ? null : (process.env.GEMINI_FALLBACK_MODEL || "gemini-3.5-flash-lite");
+const GEMINI_TIMEOUT_MS = 25000;
 // Firebase Web API key là khóa công khai (đã có sẵn trong js/config.js), chỉ dùng để
 // hỏi Firebase xem idToken của admin có hợp lệ không.
 const FIREBASE_WEB_KEY = process.env.FIREBASE_API_KEY || "AIzaSyDIWNdqj1mpnrMLsS_n2xqCWnmmZ9UGFqk";
@@ -330,10 +335,11 @@ async function runAgent({ system, userParts, tools, final }) {
   const contents = [{ role: "user", parts: userParts }];
   const declarations = [...Object.values(tools).map(t => t.declaration), final];
   const steps = [];
+  let model = GEMINI_MODEL;
 
   for (let step = 0; step < MAX_STEPS; step++) {
     const lastStep = step === MAX_STEPS - 1;
-    const data = await callGemini({
+    const payload = {
       systemInstruction: { parts: [{ text: system }] },
       contents,
       tools: [{ functionDeclarations: declarations }],
@@ -342,8 +348,31 @@ async function runAgent({ system, userParts, tools, final }) {
           ? { mode: "ANY", allowedFunctionNames: [final.name] } // hết lượt: bắt buộc chốt đề xuất
           : { mode: "ANY" },                                     // luôn trả lời bằng một công cụ
       },
-      generationConfig: { temperature: 0.4 },
-    });
+      // Nghĩ ít cho nhanh: việc chọn bánh/điền form không cần suy luận sâu
+      generationConfig: { temperature: 0.4, thinkingConfig: { thinkingLevel: "low" } },
+    };
+
+    let data;
+    try {
+      data = await callGemini(payload, model);
+    } catch (err) {
+      const canFallback = step === 0 && GEMINI_FALLBACK_MODEL && model !== GEMINI_FALLBACK_MODEL;
+      if ((err.overloaded || err.retryAfterMs) && canFallback) {
+        // Lượt đầu mà model chính quá tải / hết lượt → chạy cả yêu cầu bằng model dự phòng
+        // (model khác có hạn mức riêng). Giữa chừng thì không đổi model được vì
+        // thoughtSignature của model này không dùng cho model khác.
+        console.warn(`[admin-agent] ${model} không dùng được lúc này, chuyển sang ${GEMINI_FALLBACK_MODEL}`);
+        model = GEMINI_FALLBACK_MODEL;
+        data = await callGemini(payload, model);
+      } else if (err.retryAfterMs && err.retryAfterMs <= 30000) {
+        // Hết lượt/phút giữa chừng: đợi đúng thời gian Gemini báo rồi thử lại một lần
+        console.warn(`[admin-agent] hết lượt/phút, đợi ${Math.ceil(err.retryAfterMs / 1000)}s`);
+        await new Promise(r => setTimeout(r, err.retryAfterMs + 500));
+        data = await callGemini(payload, model);
+      } else {
+        throw err;
+      }
+    }
 
     const content = data.candidates?.[0]?.content;
     const calls = (content?.parts || []).filter(p => p.functionCall);
@@ -374,28 +403,46 @@ async function runAgent({ system, userParts, tools, final }) {
   throw publicError(502, "AI chưa chốt được đề xuất. Thử viết câu lệnh rõ hơn nhé.");
 }
 
-async function callGemini(payload) {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(GEMINI_MODEL)}:generateContent`;
+// Gọi Gemini; lỗi tạm thời (500/503 quá tải) thì đợi rồi thử lại tối đa 2 lần
+async function callGemini(payload, model, attempt = 0) {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
   let res;
   try {
     res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-goog-api-key": process.env.GEMINI_API_KEY },
       body: JSON.stringify(payload),
-      signal: AbortSignal.timeout(45000),
+      signal: AbortSignal.timeout(GEMINI_TIMEOUT_MS),
     });
   } catch (err) {
-    console.error("[admin-agent] Không gọi được Gemini:", err);
-    throw publicError(504, err?.name === "TimeoutError"
-      ? "Gemini trả lời quá lâu. Thử lại nhé."
-      : "Không kết nối được Gemini. Thử lại nhé.");
+    console.error(`[admin-agent] Không gọi được Gemini (${model}):`, err?.name || err);
+    if (err?.name === "TimeoutError") {
+      // Treo cũng coi như quá tải để chuyển sang model dự phòng
+      throw Object.assign(publicError(504, "Gemini trả lời quá lâu. Thử lại nhé."), { overloaded: true });
+    }
+    throw publicError(504, "Không kết nối được Gemini. Thử lại nhé.");
   }
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     const msg = data.error?.message || res.statusText;
-    console.error("[admin-agent] Gemini lỗi", res.status, msg);
-    if (res.status === 429) throw publicError(429, "Đã hết hạn mức Gemini miễn phí, đợi một lúc rồi thử lại nhé.");
-    if (res.status === 404) throw publicError(500, `Không tìm thấy model "${GEMINI_MODEL}". Kiểm tra biến GEMINI_MODEL.`);
+    console.error(`[admin-agent] Gemini (${model}) lỗi`, res.status, msg);
+    if (res.status === 500 || res.status === 503) {
+      if (attempt < 2) {
+        await new Promise(r => setTimeout(r, 1200 * (attempt + 1)));
+        return callGemini(payload, model, attempt + 1);
+      }
+      throw Object.assign(publicError(503, "Gemini đang quá tải, thử lại sau ít phút nhé."), { overloaded: true });
+    }
+    if (res.status === 429) {
+      // Gói miễn phí giới hạn theo phút (vài lượt/phút) và theo ngày
+      const perMinute = /per ?minute/i.test(msg);
+      const delay = (data.error?.details || []).find(d => d.retryDelay)?.retryDelay || (msg.match(/retry in ([\d.]+)s/i) || [])[1];
+      const retryAfterMs = perMinute && delay ? Math.ceil(parseFloat(delay) * 1000) : null;
+      throw Object.assign(publicError(429, perMinute
+        ? "Gemini miễn phí chỉ cho vài lượt mỗi phút. Đợi khoảng 1 phút rồi thử lại nhé."
+        : "Đã hết hạn mức Gemini miễn phí hôm nay, mai thử lại hoặc đổi model khác nhé."), { retryAfterMs });
+    }
+    if (res.status === 404) throw publicError(500, `Không tìm thấy model "${model}". Kiểm tra biến GEMINI_MODEL.`);
     if (res.status === 400 && /api key/i.test(msg)) throw publicError(500, "GEMINI_API_KEY không hợp lệ.");
     if (res.status === 403) throw publicError(500, "GEMINI_API_KEY không có quyền dùng Gemini API.");
     throw publicError(502, "Gemini báo lỗi, thử lại sau ít phút nhé.");

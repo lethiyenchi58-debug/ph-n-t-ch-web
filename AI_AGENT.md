@@ -48,18 +48,45 @@ Gemini được đặt `functionCallingConfig.mode = "ANY"` nên lượt nào c�
    GEMINI_API_KEY=khóa-của-bạn
    ADMIN_EMAILS=email-admin@gmail.com
    ```
-3. Chạy `node dev.js`, rồi mở <http://localhost:3000/admin.html> và đăng nhập admin.
+3. Nháy đúp một trong hai file:
+   - **`start.bat`**: mở **trang khách**
+   - **`admin.bat`**: mở **trang admin**, rồi đăng nhập admin
 
-`start.bat` / `server.ps1` cũ chỉ phục vụ file tĩnh nên không chạy được AI. Muốn dùng AI trên máy thì chạy bằng `dev.js`.
+   Hai file dùng chung một server, nên mở file nào trước cũng được. Server chạy trong một cửa sổ thu nhỏ dưới thanh taskbar tên *"Tiem banh Mitu - DUNG TAT CUA SO NAY"*. Tắt cửa sổ đó là tắt web.
+   Thường là cổng 3000. Nếu cổng 3000 bị phần mềm khác dùng thì server tự chọn 3001, 3002…
+   Cách tương đương bằng lệnh: `node dev.js --open admin.html`.
+
+Server trên máy chạy giống Vercel:
+- Không phục vụ các file trong `.vercelignore` và file ẩn (`.env.local`, `.git`…).
+- Chỉ máy này truy cập được, máy khác cùng Wi-Fi thì không.
+- Giới hạn dữ liệu gửi lên 4.5MB giống Vercel.
+
+## Chuyển sang máy khác
+
+1. **Copy cả thư mục**, kể cả file `.env.local`. Nếu lấy code bằng `git clone` thì sẽ không có `.env.local`, phải tự tạo lại như bước 2 ở trên.
+2. Nháy đúp `start.bat` hoặc `admin.bat`.
+   - Máy chưa có Node.js thì file batch sẽ hỏi có cài tự động không (dùng winget có sẵn trên Windows 10/11). Bấm **Y**, cài xong thì mở lại file batch.
+   - Nếu không cài, web vẫn mở được bằng `server.ps1` cũ ở cổng 8080, nhưng **không có AI**.
+   - Thiếu `.env.local` thì web vẫn chạy, chỉ có nút AI báo lỗi.
 
 ## Deploy lên Vercel
 
 1. Vercel → Project → **Settings → Environment Variables**, thêm:
    - `GEMINI_API_KEY`: khóa Gemini
    - `ADMIN_EMAILS`: email admin, nhiều email thì cách nhau dấu phẩy
-   - (tùy chọn) `GEMINI_MODEL`: mặc định là `gemini-3.8-flash`
+   - (tùy chọn) `GEMINI_MODEL`: mặc định là `gemini-3.6-flash`
+   - (tùy chọn) `GEMINI_FALLBACK_MODEL`: model dự phòng khi model chính quá tải hoặc hết lượt, mặc định `gemini-3.5-flash-lite`. Đặt `none` để tắt.
 2. Push code lên GitHub (hoặc chạy `vercel --prod`). Vercel tự nhận thư mục `api/` thành Serverless Function, không cần `package.json` vì code không dùng thư viện ngoài.
 3. Sau khi thêm hoặc sửa biến môi trường phải **Redeploy** thì mới có hiệu lực.
+
+## Gói miễn phí của Gemini
+
+- Khi thử (11/2026), `gemini-3.6-flash` miễn phí chỉ cho **5 lượt gọi/phút**. Mỗi lần dùng agent tốn khoảng 3–4 lượt, nên mỗi phút chỉ nên bấm 1 lần.
+- Server tự xử lý các tình huống sau:
+  - Gemini quá tải (503) → thử lại 2 lần.
+  - Lượt đầu bị quá tải hoặc hết lượt → chuyển sang model dự phòng (có hạn mức riêng).
+  - Hết lượt/phút giữa chừng → đợi đúng số giây Google báo rồi thử lại.
+- `gemini-3.8-flash` hay bị quá tải với key miễn phí, nên không đặt làm mặc định.
 
 ## Bảo mật
 

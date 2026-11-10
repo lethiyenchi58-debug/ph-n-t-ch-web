@@ -10,3 +10,4 @@ package-lock.json
 dev.js
 .env.local
 AI_AGENT.md
+admin.bat
