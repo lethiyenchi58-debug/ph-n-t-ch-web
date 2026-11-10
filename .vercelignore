@@ -7,3 +7,6 @@ setup.js
 server.ps1
 start.bat
 package-lock.json
+dev.js
+.env.local
+AI_AGENT.md

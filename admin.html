@@ -724,6 +724,54 @@
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; }
     }
+
+    /* ============================================================
+       AI AGENT (Gemini) – gợi ý, admin duyệt rồi mới lưu
+       ============================================================ */
+    .ai-box {
+      background: var(--butter);
+      border: 1.5px dashed var(--marigold-deep);
+      border-radius: var(--radius);
+      padding: 12px;
+      margin-bottom: 14px;
+    }
+    .ai-box-title { font-weight: 800; font-size: 14px; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+    .ai-box-row { display: flex; flex-direction: column; gap: 8px; }
+    .ai-box-row .field-input { flex: 1; min-width: 0; }
+    .btn-ai { background: var(--cocoa); color: var(--butter); border-color: var(--cocoa); }
+    .btn-ai:hover { background: #45281A; }
+    .btn-ai:disabled { opacity: .55; cursor: not-allowed; }
+    .btn-ai.is-busy::before {
+      content: ""; width: 14px; height: 14px; border-radius: 50%;
+      border: 2px solid currentColor; border-right-color: transparent;
+      animation: ai-spin .8s linear infinite;
+    }
+    @keyframes ai-spin { to { transform: rotate(360deg); } }
+    .ai-result { margin-top: 10px; background: var(--white); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 12px; font-size: 14px; }
+    .ai-result[hidden] { display: none; }
+    .ai-result p + p, .ai-result p + ul, .ai-result ul + p { margin-top: 8px; }
+    .ai-result .ai-warn { color: var(--cherry); font-weight: 600; }
+    .ai-result .ai-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+    .ai-list { list-style: none; display: grid; gap: 6px; }
+    .ai-list li { display: flex; gap: 8px; align-items: center; }
+    .ai-thumb {
+      flex: none; width: 36px; height: 36px; border-radius: 8px; object-fit: cover;
+      background: var(--paper); display: inline-flex; align-items: center; justify-content: center; font-size: 18px;
+    }
+    .ai-tag { flex: none; font-size: 11px; font-weight: 800; padding: 1px 8px; border-radius: 999px; }
+    .ai-tag.add  { background: #DCF5E5; color: var(--success); }
+    .ai-tag.keep { background: var(--paper); color: var(--cocoa-soft); }
+    .ai-tag.del  { background: #FBE1DC; color: var(--danger); }
+    .ai-reason { color: var(--cocoa-soft); font-size: 12.5px; }
+    .ai-steps { margin-top: 10px; font-size: 12.5px; color: var(--cocoa-soft); }
+    .ai-steps summary { cursor: pointer; font-weight: 700; }
+    .ai-steps ol { margin: 6px 0 0 18px; display: grid; gap: 3px; }
+    .ai-steps code { font-size: 12px; background: var(--paper); padding: 0 4px; border-radius: 4px; word-break: break-word; }
+    .ai-filled { background: #FFF8E6 !important; border-color: var(--marigold) !important; }
+    .tag-group label.ai-filled { border-radius: 6px; outline: 2px solid var(--marigold); }
+    @media (min-width: 600px) {
+      .ai-box-row { flex-direction: row; align-items: center; }
+    }
   </style>
 </head>
 <body>
@@ -864,6 +912,15 @@
         <span class="today-hint" id="todayHint">Chạm vào bánh tiệm có sẵn hôm nay, rồi bấm Lưu.</span>
       </div>
 
+      <form class="ai-box" id="aiMenuForm">
+        <label class="ai-box-title" for="aiMenuInput">✨ Lên menu bằng câu lệnh</label>
+        <div class="ai-box-row">
+          <input class="field-input" type="text" id="aiMenuInput" maxlength="500" placeholder="VD: Hôm nay có bánh dâu, tiramisu và 2 mẫu mini" />
+          <button type="submit" class="btn btn-ai" id="aiMenuBtn">Gửi cho AI</button>
+        </div>
+        <div class="ai-result" id="aiMenuResult" aria-live="polite" hidden></div>
+      </form>
+
       <div class="today-select-grid" id="todaySelectGrid">
         <!-- rendered by admin.js -->
       </div>
@@ -999,6 +1056,15 @@
             <button type="button" class="btn btn-sm btn-secondary" id="removeImgBtn" style="margin-top:10px">Xóa ảnh</button>
           </div>
         </div>
+      </div>
+
+      <div class="ai-box" id="aiCakeBox">
+        <div class="ai-box-title">✨ AI điền thông tin từ ảnh</div>
+        <div class="ai-box-row">
+          <input class="field-input" type="text" id="aiCakeHint" maxlength="300" placeholder="Ghi chú cho AI (tùy chọn): size 16cm, cốt socola…" />
+          <button type="button" class="btn btn-ai" id="aiCakeBtn" disabled>Phân tích ảnh</button>
+        </div>
+        <div class="ai-result" id="aiCakeResult" aria-live="polite" hidden></div>
       </div>
 
       <div class="field-row">
@@ -1137,6 +1203,7 @@
 <!-- Scripts -->
 <script src="js/config.js"></script>
 <script src="js/admin.js"></script>
+<script src="js/admin-ai.js"></script>
 <script type="module" src="js/db.js"></script>
 </body>
 </html>

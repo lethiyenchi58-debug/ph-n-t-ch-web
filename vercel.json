@@ -1,0 +1,5 @@
+{
+  "functions": {
+    "api/admin-agent.js": { "maxDuration": 60 }
+  }
+}

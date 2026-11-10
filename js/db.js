@@ -175,10 +175,17 @@ async function changePassword(currentPassword, newPassword) {
   await m.updatePassword(user, newPassword);
 }
 
+// Token đăng nhập của admin, gửi kèm khi gọi AI agent (api/admin-agent.js kiểm tra)
+async function getIdToken() {
+  const { auth: a } = await auth();
+  if (!a.currentUser) throw new Error("not-signed-in");
+  return a.currentUser.getIdToken();
+}
+
 window.MituDB = {
   loadAll, saveCake, deleteCake, deleteAllCakes, saveToday, saveShop,
   saveFeedback, deleteFeedback, replaceAll,
-  onAuthChange, signIn, signOut, changePassword,
+  onAuthChange, signIn, signOut, changePassword, getIdToken,
 };
 
 loadAll();
