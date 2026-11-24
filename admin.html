@@ -763,6 +763,18 @@
     .ai-tag.keep { background: var(--paper); color: var(--cocoa-soft); }
     .ai-tag.del  { background: #FBE1DC; color: var(--danger); }
     .ai-reason { color: var(--cocoa-soft); font-size: 12.5px; }
+    .ai-list .ai-name { flex: 1; min-width: 0; }
+    .ai-tag.skip { background: var(--paper); color: var(--cocoa-soft); text-decoration: line-through; }
+    .ai-list li.is-off .ai-thumb, .ai-list li.is-off .ai-name { opacity: .45; }
+    .ai-list li.is-off .ai-name { text-decoration: line-through; }
+    .ai-toggle {
+      flex: none; margin-left: auto; font: inherit; font-size: 12px; font-weight: 700;
+      padding: 3px 10px; border-radius: 999px; cursor: pointer; white-space: nowrap;
+      border: 1px solid var(--line); background: var(--white); color: var(--danger);
+    }
+    .ai-toggle:hover { background: #FBE1DC; }
+    .ai-toggle.on { color: var(--success); border-color: var(--success); }
+    .ai-toggle.on:hover { background: #DCF5E5; }
     .ai-steps { margin-top: 10px; font-size: 12.5px; color: var(--cocoa-soft); }
     .ai-steps summary { cursor: pointer; font-weight: 700; }
     .ai-steps ol { margin: 6px 0 0 18px; display: grid; gap: 3px; }

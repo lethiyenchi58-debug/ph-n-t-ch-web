@@ -249,36 +249,71 @@ async function runAiMenu() {
   }
 }
 
+// Danh sách bánh cuối cùng sẽ lưu: ban đầu = đề xuất của AI, admin bấm nút ở cuối mỗi dòng để thêm/bỏ
+let aiMenuChosen = new Set();
+
 function renderAiMenuProposal(p, currentIds, steps) {
   const box = document.getElementById("aiMenuResult");
   const cakes = new Map(getCakes().map(c => [c.id, c]));
   const newIds = new Set(p.items.map(i => i.id));
   const current = new Set(currentIds);
+  aiMenuChosen = new Set(newIds);
 
   // Nhiều bánh trùng tên ("Bánh sinh nhật") nên kèm ảnh nhỏ để admin nhận ra
   const thumb = c => c?.image
     ? `<img class="ai-thumb" src="${escH(cdnImage(c.image, 96))}" alt="" loading="lazy" />`
     : `<span class="ai-thumb">🎂</span>`;
-  const rows = p.items.map(i => {
-    const c = cakes.get(i.id);
-    const kept = current.has(i.id);
-    return `<li><span class="ai-tag ${kept ? "keep" : "add"}">${kept ? "Giữ" : "Thêm"}</span>${thumb(c)}
-      <span>${escH(c?.name || i.id)} <span class="ai-reason">· ${escH(formatPrice(c?.price || 0))}${i.reason ? ` · ${escH(i.reason)}` : ""}</span></span></li>`;
-  });
-  currentIds.filter(id => !newIds.has(id)).forEach(id => {
+  const row = (id, extra) => {
     const c = cakes.get(id);
-    rows.push(`<li><span class="ai-tag del">Bỏ</span>${thumb(c)}<span>${escH(c?.name || id)}</span></li>`);
-  });
+    return `<li data-id="${escH(id)}"><span class="ai-tag"></span>${thumb(c)}
+      <span class="ai-name">${escH(c?.name || id)} <span class="ai-reason">· ${escH(formatPrice(c?.price || 0))}${extra ? ` · ${escH(extra)}` : ""}</span></span>
+      <button type="button" class="ai-toggle"></button></li>`;
+  };
+  const rows = p.items.map(i => row(i.id, i.reason));
+  currentIds.filter(id => !newIds.has(id)).forEach(id => rows.push(row(id, "AI đề xuất bỏ")));
 
   box.innerHTML = `
     ${p.summary ? `<p>${escH(p.summary)}</p>` : ""}
-    ${rows.length ? `<ul class="ai-list">${rows.join("")}</ul>` : `<p class="ai-warn">AI không tìm được bánh nào phù hợp.</p>`}
+    ${rows.length ? `<ul class="ai-list" id="aiMenuList">${rows.join("")}</ul>` : `<p class="ai-warn">AI không tìm được bánh nào phù hợp.</p>`}
     ${p.unmatched.length ? `<p class="ai-warn">⚠️ Không tìm thấy trong kho: ${p.unmatched.map(escH).join(", ")}</p>` : ""}
     ${renderAiSteps(steps)}
     <div class="ai-actions">
-      ${p.items.length ? `<button type="button" class="btn btn-sm btn-primary" id="aiMenuApplyBtn">Áp dụng &amp; lưu (${p.items.length} bánh)</button>` : ""}
+      ${rows.length ? `<button type="button" class="btn btn-sm btn-primary" id="aiMenuApplyBtn"></button>` : ""}
       <button type="button" class="btn btn-sm btn-secondary" id="aiMenuDismissBtn">Bỏ qua</button>
     </div>`;
+
+  // Cập nhật nhãn, nút và số bánh theo lựa chọn hiện tại
+  const refresh = () => {
+    box.querySelectorAll("#aiMenuList li").forEach(li => {
+      const id = li.dataset.id;
+      const on = aiMenuChosen.has(id);
+      const tag = li.querySelector(".ai-tag");
+      const [cls, text] = on
+        ? (current.has(id) ? ["keep", "Giữ"] : ["add", "Thêm"])
+        : (current.has(id) ? ["del", "Bỏ"] : ["skip", "Không thêm"]);
+      tag.className = `ai-tag ${cls}`;
+      tag.textContent = text;
+      li.classList.toggle("is-off", !on);
+      const btn = li.querySelector(".ai-toggle");
+      btn.classList.toggle("on", !on);
+      btn.textContent = on ? "✕ Bỏ" : "+ Thêm";
+      btn.title = on ? "Bỏ bánh này khỏi menu" : "Thêm bánh này vào menu";
+    });
+    const apply = document.getElementById("aiMenuApplyBtn");
+    if (apply) {
+      apply.textContent = `Áp dụng & lưu (${aiMenuChosen.size} bánh)`;
+      apply.disabled = !aiMenuChosen.size;
+    }
+  };
+
+  document.getElementById("aiMenuList")?.addEventListener("click", e => {
+    const btn = e.target.closest(".ai-toggle");
+    if (!btn) return;
+    const id = btn.closest("li").dataset.id;
+    if (aiMenuChosen.has(id)) aiMenuChosen.delete(id); else aiMenuChosen.add(id);
+    refresh();
+  });
+  refresh();
 
   document.getElementById("aiMenuApplyBtn")?.addEventListener("click", applyAiMenu);
   document.getElementById("aiMenuDismissBtn").addEventListener("click", () => {
@@ -289,9 +324,9 @@ function renderAiMenuProposal(p, currentIds, steps) {
 }
 
 async function applyAiMenu(e) {
-  if (!aiMenuProposal) return;
+  if (!aiMenuProposal || !aiMenuChosen.size) return;
   const prev = new Set(selectedToday);
-  selectedToday = new Set(aiMenuProposal.items.map(i => i.id));
+  selectedToday = new Set(aiMenuChosen);
   try {
     await withBusy(e.currentTarget, () => saveTodayToStorage());
   } catch (err) {
