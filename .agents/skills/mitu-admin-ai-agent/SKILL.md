@@ -37,6 +37,7 @@ Khi phát triển hoặc chỉnh sửa tính năng AI Agent cho trang quản tr�
 4. **Xây dựng giao diện tương tác trên trang Admin (`js/admin-ai.js` và `admin.html`):**
    - **Form thêm bánh:** Bổ sung nút "Phân tích ảnh" và ô ghi chú gợi ý. Khi nhận kết quả từ AI, tự động điền các trường dữ liệu vào form, tô màu nền nổi bật các ô vừa được điền và cung cấp nút "Hoàn tác" để chủ tiệm dễ dàng khôi phục nội dung cũ.
    - **Tab Menu hôm nay:** Bổ sung khung nhập câu lệnh tự nhiên. Hiển thị kết quả đề xuất trực quan với các nhãn trạng thái (Thêm / Giữ / Bỏ), liệt kê các món không tìm thấy trong kho và nút "Áp dụng & lưu".
+   - **Chủ tiệm tự chỉnh đề xuất menu:** Cuối mỗi dòng bánh có một nút bật/tắt ("✕ Bỏ" / "+ Thêm") để loại bánh AI đề xuất hoặc giữ lại bánh AI định bỏ. Dòng bị loại hiển thị mờ, gạch ngang và nhãn đổi thành "Không thêm" (bánh mới) hoặc "Bỏ" (bánh đang có trong menu). Nút "Áp dụng & lưu (N bánh)" cập nhật số bánh theo lựa chọn, chỉ lưu các bánh đang được chọn và bị vô hiệu khi không còn bánh nào.
    - **Minh bạch quá trình suy luận:** Hiển thị khu vực xem chi tiết các bước mà Agent đã thực hiện (tên công cụ đã gọi và tham số) để chủ tiệm dễ dàng theo dõi và kiểm chứng.
 
 5. **Xử lý lỗi, hạn mức và cơ chế dự phòng (Error Handling & Fallback):**
@@ -57,5 +58,6 @@ Khi phát triển hoặc chỉnh sửa tính năng AI Agent cho trang quản tr�
 - **Kiểm tra nhận diện ảnh không hợp lệ:** Chọn ảnh không phải bánh ngọt (ví dụ ảnh phong cảnh, động vật); xác minh hệ thống hiển thị thông báo ảnh không phù hợp và không điền bừa vào form.
 - **Kiểm tra câu lệnh Menu đầy đủ:** Nhập câu lệnh yêu cầu các loại bánh có sẵn trong kho (ví dụ: bánh dâu, tiramisu và số lượng bánh mini); xác minh AI đề xuất đúng danh sách bánh tương ứng.
 - **Kiểm tra câu lệnh điều chỉnh (Thêm/Bớt):** Nhập câu lệnh bổ sung hoặc lược bỏ một loại bánh khi menu hiện tại đang có dữ liệu; xác minh hệ thống giữ nguyên các món cũ và đánh dấu đúng nhãn Thêm hoặc Bỏ.
+- **Kiểm tra chỉnh tay đề xuất menu:** Sau khi AI đề xuất, bấm "✕ Bỏ" ở một bánh và "+ Thêm" ở một bánh AI định bỏ; xác minh nhãn và số bánh trên nút lưu thay đổi theo, và menu lưu ra đúng với lựa chọn cuối cùng.
 - **Kiểm tra món không có trong kho:** Nhập câu lệnh có chứa tên một loại bánh chưa từng có trong cơ sở dữ liệu; xác minh món đó xuất hiện trong danh sách "Không tìm thấy trong kho" và không bị gán nhầm sang bánh khác.
 - **Kiểm tra cơ chế lưu an toàn:** Sau khi AI đề xuất xong, nếu không bấm nút lưu thì dữ liệu trong kho và Menu hôm nay của website phải hoàn toàn không bị thay đổi.

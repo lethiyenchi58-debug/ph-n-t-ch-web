@@ -3,7 +3,7 @@
 Trợ lý AI (Gemini) trên trang `admin.html`, làm hai việc:
 
 1. **Thêm bánh từ ảnh**: trong form *Thêm bánh mới*, chọn ảnh rồi bấm **Phân tích ảnh**. Agent nhìn ảnh, tra giá các bánh tương tự trong kho, rồi điền tên, mô tả, danh mục, nhãn và giá vào form (các ô được tô vàng). Admin sửa lại nếu cần rồi bấm **Lưu bánh**. Có nút **Hoàn tác**.
-2. **Lên menu bằng câu lệnh**: ở tab *Menu hôm nay*, gõ ví dụ *"Hôm nay có bánh dâu, tiramisu và 2 mẫu mini"*. Agent tìm từng bánh trong kho rồi đề xuất danh sách Thêm / Giữ / Bỏ, kèm những ý không tìm thấy. Admin bấm **Áp dụng & lưu** thì menu mới được lưu.
+2. **Lên menu bằng câu lệnh**: ở tab *Menu hôm nay*, gõ ví dụ *"Hôm nay có bánh dâu, tiramisu và 2 mẫu mini"*. Agent tìm từng bánh trong kho rồi đề xuất danh sách Thêm / Giữ / Bỏ, kèm những ý không tìm thấy. Cuối mỗi dòng bánh có nút **✕ Bỏ** / **+ Thêm** để admin tự loại bánh AI đề xuất hoặc giữ lại bánh AI định bỏ (dòng bị loại mờ đi, nhãn đổi thành *Không thêm* / *Bỏ*). Admin bấm **Áp dụng & lưu (N bánh)** thì chỉ những bánh đang được chọn mới được lưu.
 
 Agent **chỉ đề xuất**. Không công cụ nào của agent ghi được vào Firestore: lần ghi duy nhất là khi admin bấm nút lưu.
 
@@ -17,7 +17,8 @@ admin.html ──(ảnh / câu lệnh + kho bánh + Firebase idToken)──▶ /
                                                                 │      … cho tới khi Gemini gọi propose_cake / propose_menu
                                                                 │ 3. kiểm lại đề xuất (id có thật, nhãn hợp lệ, giá làm tròn)
 admin.html ◀──────────────(đề xuất + các bước agent đã làm)─────┘
-   └─ admin duyệt → bấm Lưu → ghi Firestore như cũ
+   ├─ (menu) admin bấm ✕ Bỏ / + Thêm ở cuối từng dòng để chỉnh danh sách đề xuất
+   └─ admin duyệt → bấm Lưu → ghi Firestore như cũ (chỉ các bánh đang được chọn)
 ```
 
 | File | Vai trò |
