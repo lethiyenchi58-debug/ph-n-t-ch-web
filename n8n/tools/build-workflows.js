@@ -201,7 +201,7 @@ const X = i => 240 + i * 240;
 // ═════════════════════════════════════════════════════════════
 {
   const nodes = [
-    sticky("## WF2 · Theo dõi đối thủ mỗi tuần\nThứ Hai 7:00, n8n tự:\n1. **Tự tìm** tiệm bánh quanh khu vực (Tavily + AI lọc) và gộp với danh sách trong **n8n/cau-hinh/doi-thu.txt**\n2. Tìm trên web (Tavily) tin mới về từng tiệm + xu hướng bánh\n3. So với kho bánh Mitu → báo cáo + 5 ý tưởng bài đăng\n4. Gửi Telegram, lưu file vào **n8n/bao-cao/**, chuyển ý tưởng sang **WF3** để lên lịch đăng\n\nMuốn đổi giờ chạy: bấm vào ô ⏰.", [0, -260], 520, 300, 4),
+    sticky("## WF2 · Theo dõi đối thủ mỗi tuần\nThứ Hai 7:00, n8n tự:\n1. **Tự tìm** tiệm bánh quanh khu vực (Tavily + AI lọc) và gộp với danh sách trong **n8n/cau-hinh/doi-thu.txt**\n2. Tìm trên web (Tavily) tin mới về từng tiệm + xu hướng bánh\n3. So với kho bánh Mitu → báo cáo + 5 ý tưởng bài đăng\n4. Gửi Telegram, lưu file vào **n8n/bao-cao/**, chuyển ý tưởng sang **WF3** làm chủ đề bài hằng ngày\n\nMuốn đổi giờ chạy: bấm vào ô ⏰.", [0, -260], 520, 300, 4),
     node("⏰ Thứ Hai 7:00", "n8n-nodes-base.scheduleTrigger", 1.2, { rule: { interval: [{ field: "weeks", triggerAtDay: [1], triggerAtHour: 7 }] } }, [X(0), 0]),
     manual([X(0), 200]),
     // ── Tự tìm đối thủ quanh tiệm ──
@@ -355,7 +355,7 @@ Yêu cầu:
       if ((r.viec_nen_lam || []).length) L.push("", "<b>✅ 3 việc nên làm</b>", ...r.viec_nen_lam.map((v, i) => `${i + 1}. ${escHtml(v)}`));
       if ((r.doi_thu || []).length) L.push("", "<b>🏪 Đối thủ</b>", ...r.doi_thu.map(d => `• <b>${escHtml(d.ten)}</b>: ${escHtml(d.diem_noi_bat)} · Giá: ${escHtml(d.khoang_gia)} · KM: ${escHtml(d.khuyen_mai)}`));
       if ((r.xu_huong || []).length) L.push("", "<b>🔥 Xu hướng</b>", ...r.xu_huong.map(x => "• " + escHtml(x)));
-      if (ideas.length) L.push("", `<b>💡 ${ideas.length} ý tưởng bài đăng</b> (đã chuyển sang WF3 để lên lịch)`, ...ideas.map(y => `• ${escHtml(y.tieu_de)} – <i>${escHtml(y.banh_mitu)}</i>`));
+      if (ideas.length) L.push("", `<b>💡 ${ideas.length} ý tưởng bài đăng</b> (WF3 dùng làm chủ đề cho bài đăng hằng ngày)`, ...ideas.map(y => `• ${escHtml(y.tieu_de)} – <i>${escHtml(y.banh_mitu)}</i>`));
       let telegram_text = L.join("\n");
       if (telegram_text.length > 3900) telegram_text = telegram_text.slice(0, 3900) + "\n…(xem đủ trong file báo cáo)";
 
@@ -368,7 +368,7 @@ Yêu cầu:
         ...(r.so_sanh_gia || []).map(s => `| ${s.nhom_banh} | ${s.mitu} | ${s.doi_thu} | ${s.nhan_xet} |`),
         "", "## Xu hướng", ...(r.xu_huong || []).map(x => "- " + x),
         "", "## Cơ hội cho Mitu", ...(r.co_hoi || []).map(x => "- " + x),
-        "", "## Ý tưởng bài đăng (đã chuyển sang WF3)", ...ideas.map(y => `- **${y.tieu_de}** – ${y.goc_nhin} _(bánh: ${y.banh_mitu})_`),
+        "", "## Ý tưởng bài đăng (WF3 dùng làm chủ đề cho bài hằng ngày)", ...ideas.map(y => `- **${y.tieu_de}** – ${y.goc_nhin} _(bánh: ${y.banh_mitu})_`),
         "", "## Ghi chú nghiên cứu gốc", ...notes.map(n => `### ${n.ten}\n${n.ghi_chu}\n${(n.nguon || []).map(s => `- [${s.title}](${s.uri})`).join("\n")}`),
       ].join("\n");
       let file = "";
@@ -411,10 +411,11 @@ Yêu cầu:
 // ═════════════════════════════════════════════════════════════
 const CAPTION_PROMPT = body(function () {
     function captionBody(bai, shop, voice) {
-      const cakes = bai.cakes.map(c => `- ${c.name}: ${vnd(c.price)}${c.desc ? " – " + String(c.desc).slice(0, 160) : ""}`).join("\n");
-      const what = bai.loai === "menu"
-        ? `Bài "Menu hôm nay" (${bai.ngay}): giới thiệu các bánh có sẵn hôm nay, khách đặt/ghé lấy luôn được.`
-        : `Bài theo ý tưởng: "${bai.tieu_de}". Góc nhìn: ${bai.goc_nhin}.`;
+      const cakes = bai.cakes.map(c => `- ${c.name}${c.moi ? " (MẪU MỚI)" : ""}: ${vnd(c.price)}${c.desc ? " – " + String(c.desc).slice(0, 160) : ""}`).join("\n");
+      const coMoi = bai.cakes.some(c => c.moi);
+      const what = `Bài giới thiệu ${bai.cakes.length} mẫu bánh của Mitu (đăng kèm ${bai.anh.length} ảnh, mỗi ảnh 1 bánh theo đúng thứ tự dưới đây).`
+        + (coMoi ? " Có mẫu mới ra lò – nhấn mạnh các mẫu ghi (MẪU MỚI)." : "")
+        + (bai.chu_de ? `\nChủ đề / góc nhìn gợi ý cho hôm nay: "${bai.chu_de.tieu_de}" – ${bai.chu_de.goc_nhin}. Dùng làm cảm hứng mở bài, không bắt buộc gắn với từng bánh.` : "");
       const prompt = `Bạn viết bài Facebook cho Fanpage Tiệm bánh Mitu.
 ${what}
 
@@ -427,8 +428,8 @@ Giọng văn của Mitu:
 ${voice}
 
 Yêu cầu:
-- Dòng đầu gây chú ý; sau đó giới thiệu bánh (tên + 1 ý hấp dẫn + giá viết dạng 350.000đ); cuối bài kêu gọi nhắn Zalo / inbox và ghi địa chỉ.
-- Tối đa 900 ký tự, xuống dòng cho dễ đọc trên điện thoại.
+- Dòng đầu gây chú ý; sau đó giới thiệu lần lượt từng bánh (tên + 1 ý hấp dẫn + giá viết dạng 350.000đ); cuối bài kêu gọi nhắn Zalo / inbox và ghi địa chỉ.
+- Tối đa 1.000 ký tự, xuống dòng cho dễ đọc trên điện thoại.
 - Chỉ tả bánh dựa trên tên và mô tả ở trên. Không tự thêm số người ăn, kích thước, cốt bánh, nguyên liệu, khuyến mãi, quà tặng, freeship.
 - caption KHÔNG chứa hashtag; hashtag để riêng trong hashtags (3–6 cái, có dấu # ở đầu).`;
       return {
@@ -463,11 +464,11 @@ const CHECK_CAPTION = function () {
         const low = caption.toLowerCase();
         const words = BANNED.filter(w => low.includes(w));
         if (words.length) issues.push("có từ không được dùng: " + words.join(", "));
-        if (caption.length < 60 || caption.length > 1500) issues.push("độ dài bất thường (" + caption.length + " ký tự)");
+        if (caption.length < 60 || caption.length > 1600) issues.push("độ dài bất thường (" + caption.length + " ký tự)");
       }
       if (issues.length) {
-        caption = (bai.loai === "menu" ? `🍰 Menu hôm nay (${bai.ngay}) của Mitu đây cả nhà ơi!` : `✨ ${bai.tieu_de}`) + "\n\n"
-          + bai.cakes.map(c => `🎂 ${c.name} – ${vnd(c.price)}`).join("\n")
+        caption = `🎂 Mẫu bánh xinh nhà Mitu hôm nay đây cả nhà ơi!\n\n`
+          + bai.cakes.map(c => `${c.moi ? "🆕" : "🍰"} ${c.name} – ${vnd(c.price)}`).join("\n")
           + `\n\n📩 Đặt bánh: nhắn Zalo ${shop.zaloPhone || "0936290932"} hoặc inbox Mitu nha!\n📍 ${shop.shopAddress || "173 Vạn Phúc, Hà Đông, Hà Nội"}`;
         tags = [];
       }
@@ -478,54 +479,58 @@ const CHECK_CAPTION = function () {
 };
 const checkCode = srcName => body(CHECK_CAPTION).replace("$(SRC)", `$(${JSON.stringify(srcName)})`);
 {
-  const A = 0, B = 520, P = 980;
+  const A = 0, B = 520, P = 900;
   const nodes = [];
   const codeC = (name, fn, pos) => { const n = code(name, fn, pos); n.parameters.jsCode = SHARED + "\n" + CAPTION_PROMPT + "\n" + body(fn); return n; };
 
   nodes.push(
-    sticky("## WF3 · Tự đăng bài Facebook\n**Luồng A** (8:00 mỗi sáng): lấy *Menu hôm nay* trên web → AI viết bài → kiểm tra giá / từ cấm → đăng ngay.\n**Luồng B** (WF2 gọi vào thứ Hai): ý tưởng tuần → AI viết bài → **hẹn giờ** trên Facebook cho cả tuần (xem ở Meta Business Suite → Nội dung → Đã lên lịch).\n\n`CHE_DO_THU=1` trong .env.local → chỉ gửi bản nháp qua Telegram, **chưa đăng thật**.", [0, -320], 640, 290, 4),
+    sticky("## WF3 · Mỗi ngày 1 bài Facebook\n8:00 mỗi sáng, n8n tự:\n1. Lấy kho bánh trên web, chọn **4–5 mẫu**: ưu tiên mẫu **mới nhất chưa từng đăng**; đăng hết rồi thì quay lại mẫu đăng lâu nhất. **Không trùng id** với các bài trước.\n2. AI viết bài (chủ đề lấy từ ý tưởng tuần của WF2 nếu có) → kiểm tra giá / từ cấm.\n3. Đăng 1 bài nhiều ảnh lên Fanpage, ghi nhớ id bánh đã đăng.\n\n`CHE_DO_THU=1` trong .env.local → chỉ gửi bản nháp qua Telegram, **chưa đăng thật**.\nSố ảnh mỗi bài: `SO_ANH_MOI_BAI` trong .env.local (mặc định 5).", [0, -340], 660, 320, 4),
     node("⏰ 8:00 mỗi sáng", "n8n-nodes-base.scheduleTrigger", 1.2, { rule: { interval: [{ field: "days", triggerAtHour: 8 }] } }, [X(0), A]),
     manual([X(0), A + 180]),
-    codeC("🧾 Chuẩn bị bài Menu hôm nay", async function () {
+    codeC("🧾 Chọn 4–5 mẫu bánh hôm nay", async function () {
       const shop = await loadShop(this.helpers);
-      const today = $now.setZone("Asia/Ho_Chi_Minh").toFormat("dd/MM/yyyy");
-      const skip = ly_do => [{ json: { skip: true, telegram_text: ly_do ? "ℹ️ <b>WF3 – chưa đăng bài Menu hôm nay</b>\n" + ly_do : "" } }];
-      if (!sameDay(shop.today.date, today)) return skip(`Menu trên web vẫn là ngày ${escHtml(shop.today.date || "(trống)")}. Cập nhật <b>Menu hôm nay</b> ở trang admin rồi bấm chạy lại WF3 (hoặc đợi sáng mai).`);
-      const cakes = (shop.today.ids || []).map(id => shop.cakes.find(c => c.id === id)).filter(Boolean);
-      if (!cakes.length) return skip("Menu hôm nay đang trống.");
-      if (readState().menu_da_dang === today) return skip(""); // đã đăng rồi, không đăng trùng
-      const bai = { loai: "menu", ngay: today, cakes: cakes.map(c => ({ id: c.id, name: c.name, price: c.price, desc: c.desc, image: c.image })), anh: cakes.map(c => c.image).filter(Boolean).slice(0, 6), lich: null };
+      const now = $now.setZone("Asia/Ho_Chi_Minh");
+      const today = now.toFormat("dd/MM/yyyy");
+      const st = readState();
+      const skip = ly_do => [{ json: { skip: true, telegram_text: ly_do ? "ℹ️ <b>WF3 – hôm nay chưa đăng bài</b>\n" + ly_do : "" } }];
+      if (st.ngay_dang_cuoi === today) return skip(""); // đã đăng hôm nay rồi, không đăng 2 bài/ngày
+      const soAnh = Math.max(1, Math.min(10, parseInt($env.SO_ANH_MOI_BAI || "5", 10) || 5));
+      const daDang = st.da_dang || {}; // { id bánh: thời điểm đăng gần nhất }
+      const tg = c => Date.parse(c.createdAt || c.updatedAt || "") || 0;
+      // Chỉ bánh có ảnh; mỗi id chỉ 1 lần (phòng kho có bản ghi trùng)
+      const seen = new Set();
+      const pool = shop.cakes.filter(c => c.image && c.id && !seen.has(c.id) && seen.add(c.id));
+      if (!pool.length) return skip("Kho bánh chưa có bánh nào có ảnh.");
+      // 1) Chưa đăng bao giờ: mới nhất trước. 2) Đã đăng: đăng lâu nhất trước (rồi mới nhất trước).
+      const chuaDang = pool.filter(c => !daDang[c.id]).sort((a, b) => tg(b) - tg(a));
+      const daDangRoi = pool.filter(c => daDang[c.id]).sort((a, b) => (Date.parse(daDang[a.id]) - Date.parse(daDang[b.id])) || (tg(b) - tg(a)));
+      const chon = [...chuaDang, ...daDangRoi].slice(0, soAnh);
+      const moiTu = now.minus({ days: 14 }).toMillis();
+      const cakes = chon.map(c => ({ id: c.id, name: c.name, price: c.price, desc: c.desc, image: c.image, moi: !daDang[c.id] && tg(c) >= moiTu }));
+      // Chủ đề: ý tưởng tuần của WF2 (lần lượt từng cái, hết thì thôi)
+      const yt = st.y_tuong_tuan || [];
+      const chu_de = yt[st.y_tuong_dung || 0] || null;
+      const bai = { loai: "hang_ngay", ngay: today, cakes, anh: cakes.map(c => c.image), lich: null, chu_de,
+        ghi_chu: chuaDang.length < soAnh ? `Còn ${chuaDang.length} mẫu chưa từng đăng, phần còn lại lấy mẫu đăng lâu nhất.` : "" };
       return [{ json: { skip: false, bai, shop: shop.shop, gemini_body: captionBody(bai, shop.shop, readConfig("giong-van.txt")) } }];
     }, [X(1), A + 90]),
     ifNode("Có bài để đăng?", "={{ !$json.skip }}", [X(2), A + 90]),
     ifNode("Có cần báo không?", "={{ !!$json.telegram_text }}", [X(3), A + 260]),
     telegram("📨 Báo chưa đăng", [X(4), A + 260]),
-    gemini("✍️ AI viết bài (A)", [X(3), A]),
-    code("🛡️ Kiểm tra tự động (A)", () => {}, [X(4), A]),
-    // Luồng B
+    gemini("✍️ AI viết bài", [X(3), A]),
+    code("🛡️ Kiểm tra tự động", () => {}, [X(4), A]),
+    // Ý tưởng tuần từ WF2 → lưu lại làm chủ đề cho bài hằng ngày
     node("➡️ Nhận ý tưởng từ WF2", "n8n-nodes-base.executeWorkflowTrigger", 1.1, { inputSource: "passthrough" }, [X(0), B]),
-    codeC("🗓️ Lên lịch bài cho tuần", async function () {
-      const shop = await loadShop(this.helpers);
-      const voice = readConfig("giong-van.txt");
-      const ideas = $input.all().flatMap(i => i.json.y_tuong || []).slice(0, 5);
-      const base = $now.setZone("Asia/Ho_Chi_Minh").startOf("day");
-      const SLOTS = [[1, 11, 0], [2, 19, 30], [3, 11, 0], [4, 19, 30], [5, 11, 0]]; // (ngày sau hôm nay, giờ, phút)
-      return ideas.map((y, i) => {
-        const cake = shop.cakes.find(c => c.id === y.banh_id) || shop.cakes.find(c => norm(c.name) === norm(y.banh_mitu));
-        if (!cake) return null;
-        const [d, h, m] = SLOTS[i];
-        const at = base.plus({ days: d }).set({ hour: h, minute: m });
-        const bai = { loai: "y_tuong", tieu_de: y.tieu_de, goc_nhin: y.goc_nhin, cakes: [{ id: cake.id, name: cake.name, price: cake.price, desc: cake.desc, image: cake.image }], anh: [cake.image].filter(Boolean), lich: Math.floor(at.toSeconds()), lich_text: at.toFormat("HH:mm dd/MM") };
-        return { json: { bai, shop: shop.shop, gemini_body: captionBody(bai, shop.shop, voice) } };
-      }).filter(Boolean);
+    code("💡 Lưu ý tưởng tuần", function () {
+      const ideas = $input.all().flatMap(i => i.json.y_tuong || []).slice(0, 7).map(y => ({ tieu_de: y.tieu_de, goc_nhin: y.goc_nhin }));
+      writeState({ y_tuong_tuan: ideas, y_tuong_dung: 0 });
+      return [{ json: { so_y_tuong: ideas.length } }];
     }, [X(1), B]),
-    gemini("✍️ AI viết bài (B)", [X(2), B], { batch: 13000 }),
-    code("🛡️ Kiểm tra tự động (B)", () => {}, [X(3), B]),
-    // Phần đăng chung
-    sticky("### Phần đăng chung\nTải ảnh lên Facebook (ẩn) → ghép thành 1 bài nhiều ảnh → đăng ngay hoặc hẹn giờ → báo Telegram kèm link.", [X(5), P - 170], 520, 140, 6),
+    // Phần đăng
+    sticky("### Phần đăng\nChế độ thử → gửi bản nháp. Không thì: tải từng ảnh lên Facebook (ẩn) → ghép 1 bài nhiều ảnh → đăng → ghi nhớ id bánh đã đăng → báo Telegram kèm link.", [X(5), P - 170], 520, 140, 6),
     ifNode("Chế độ thử?", "={{ String($env.CHE_DO_THU || '') === '1' }}", [X(5), P]),
     code("👀 Soạn bản nháp gửi Telegram", function () {
-      return $input.all().map(i => ({ json: { telegram_text: `🧪 <b>Chế độ thử – bài CHƯA đăng</b>${i.json.bai.lich_text ? " (dự kiến " + i.json.bai.lich_text + ")" : ""}\nKiểm tra: ${escHtml(i.json.kiem_tra)}\n\n${escHtml(i.json.message)}\n\n🖼 ${i.json.bai.anh.length} ảnh: ${i.json.bai.anh.map(escHtml).join(" ")}` } }));
+      return $input.all().map(i => { const b = i.json.bai; return { json: { telegram_text: `🧪 <b>Chế độ thử – bài CHƯA đăng</b>\nKiểm tra: ${escHtml(i.json.kiem_tra)}${b.ghi_chu ? "\nℹ️ " + escHtml(b.ghi_chu) : ""}${b.chu_de ? "\n💡 Chủ đề: " + escHtml(b.chu_de.tieu_de) : ""}\n🍰 ${b.cakes.map(c => escHtml(c.name) + (c.moi ? " 🆕" : "")).join(", ")}\n\n${escHtml(i.json.message)}\n\n🖼 ${b.anh.length} ảnh:\n${b.anh.map(escHtml).join("\n")}` } }; });
     }, [X(6), P - 100]),
     telegram("📨 Gửi bản nháp", [X(7), P - 100]),
     code("📸 Tách từng ảnh", function () {
@@ -555,19 +560,24 @@ const checkCode = srcName => body(CHECK_CAPTION).replace("$(SRC)", `$(${JSON.str
         return { json: { bai: p.bai, kiem_tra: p.kiem_tra, fb_body: body, loi_anh: errors } };
       });
     }, [X(8), P + 100]),
-    http("📢 Đăng / hẹn giờ bài", {
+    http("📢 Đăng bài", {
       url: fbUrl("{{ $env.FACEBOOK_PAGE_ID }}/feed"),
       json: "={{ JSON.stringify($json.fb_body) }}",
       onError: "continueRegularOutput", retry: false,
     }, [X(9), P + 100]),
-    code("📝 Ghi nhớ + báo kết quả", function () {
+    code("📝 Ghi nhớ id đã đăng + báo kết quả", function () {
       const src = $("🧩 Ghép bài").all().map(i => i.json);
       return $input.all().map((it, i) => {
         const r = it.json, p = src[i];
         if (r.id) {
-          if (p.bai.loai === "menu") writeState({ menu_da_dang: p.bai.ngay });
+          // Ghi nhớ: id bánh đã đăng (để lần sau không chọn lại), ngày đăng, ý tưởng đã dùng
+          const st = readState();
+          const daDang = { ...(st.da_dang || {}) };
+          const at = new Date().toISOString();
+          for (const c of p.bai.cakes) daDang[c.id] = at;
+          writeState({ da_dang: daDang, ngay_dang_cuoi: p.bai.ngay, y_tuong_dung: (st.y_tuong_dung || 0) + (p.bai.chu_de ? 1 : 0) });
           const link = "https://www.facebook.com/" + r.id;
-          return { json: { telegram_text: `${p.bai.lich ? "🗓️ <b>Đã hẹn giờ đăng " + p.bai.lich_text + "</b>" : "✅ <b>Đã đăng bài</b>"}: ${escHtml(p.bai.loai === "menu" ? "Menu hôm nay " + p.bai.ngay : p.bai.tieu_de)}\n${link}\nKiểm tra: ${escHtml(p.kiem_tra)}${p.loi_anh.length ? "\n⚠️ Lỗi ảnh: " + escHtml(p.loi_anh.join("; ")) : ""}` } };
+          return { json: { telegram_text: `✅ <b>Đã đăng bài ${escHtml(p.bai.ngay)}</b> (${p.bai.cakes.length} mẫu: ${escHtml(p.bai.cakes.map(c => c.name).join(", "))})\n${link}\nKiểm tra: ${escHtml(p.kiem_tra)}${p.loi_anh.length ? "\n⚠️ Lỗi ảnh: " + escHtml(p.loi_anh.join("; ")) : ""}` } };
         }
         const err = (r.error && (r.error.message || JSON.stringify(r.error))) || JSON.stringify(r).slice(0, 300);
         return { json: { telegram_text: `❌ <b>Đăng bài lỗi</b>: ${escHtml(err)}\nThường do token Facebook hết hạn hoặc thiếu quyền – xem mục "Sự cố" trong WORKFLOW_N8N.md.` } };
@@ -575,23 +585,21 @@ const checkCode = srcName => body(CHECK_CAPTION).replace("$(SRC)", `$(${JSON.str
     }, [X(10), P + 100]),
     telegram("📨 Báo kết quả đăng", [X(11), P + 100]),
   );
-  nodes.find(n => n.name === "🛡️ Kiểm tra tự động (A)").parameters.jsCode = SHARED + "\n" + checkCode("🧾 Chuẩn bị bài Menu hôm nay");
-  nodes.find(n => n.name === "🛡️ Kiểm tra tự động (B)").parameters.jsCode = SHARED + "\n" + checkCode("🗓️ Lên lịch bài cho tuần");
+  nodes.find(n => n.name === "🛡️ Kiểm tra tự động").parameters.jsCode = SHARED + "\n" + checkCode("🧾 Chọn 4–5 mẫu bánh hôm nay");
 
   save("WF3-dang-bai.json", {
-    id: "MituWf3DangBai01", name: "Mitu WF3 · Tự đăng bài Facebook (8:00 + lịch tuần)", nodes,
+    id: "MituWf3DangBai01", name: "Mitu WF3 · Mỗi ngày 1 bài Facebook (8:00)", nodes,
     wires: [
-      ["⏰ 8:00 mỗi sáng", "🧾 Chuẩn bị bài Menu hôm nay"], ["▶️ Bấm để chạy thử", "🧾 Chuẩn bị bài Menu hôm nay"],
-      ["🧾 Chuẩn bị bài Menu hôm nay", "Có bài để đăng?"],
-      ["Có bài để đăng?", "✍️ AI viết bài (A)", 0], ["Có bài để đăng?", "Có cần báo không?", 1],
+      ["⏰ 8:00 mỗi sáng", "🧾 Chọn 4–5 mẫu bánh hôm nay"], ["▶️ Bấm để chạy thử", "🧾 Chọn 4–5 mẫu bánh hôm nay"],
+      ["🧾 Chọn 4–5 mẫu bánh hôm nay", "Có bài để đăng?"],
+      ["Có bài để đăng?", "✍️ AI viết bài", 0], ["Có bài để đăng?", "Có cần báo không?", 1],
       ["Có cần báo không?", "📨 Báo chưa đăng", 0],
-      ["✍️ AI viết bài (A)", "🛡️ Kiểm tra tự động (A)"], ["🛡️ Kiểm tra tự động (A)", "Chế độ thử?"],
-      ["➡️ Nhận ý tưởng từ WF2", "🗓️ Lên lịch bài cho tuần"], ["🗓️ Lên lịch bài cho tuần", "✍️ AI viết bài (B)"],
-      ["✍️ AI viết bài (B)", "🛡️ Kiểm tra tự động (B)"], ["🛡️ Kiểm tra tự động (B)", "Chế độ thử?"],
+      ["✍️ AI viết bài", "🛡️ Kiểm tra tự động"], ["🛡️ Kiểm tra tự động", "Chế độ thử?"],
+      ["➡️ Nhận ý tưởng từ WF2", "💡 Lưu ý tưởng tuần"],
       ["Chế độ thử?", "👀 Soạn bản nháp gửi Telegram", 0], ["👀 Soạn bản nháp gửi Telegram", "📨 Gửi bản nháp"],
       ["Chế độ thử?", "📸 Tách từng ảnh", 1], ["📸 Tách từng ảnh", "⬆️ Tải ảnh lên Facebook (ẩn)"],
-      ["⬆️ Tải ảnh lên Facebook (ẩn)", "🧩 Ghép bài"], ["🧩 Ghép bài", "📢 Đăng / hẹn giờ bài"],
-      ["📢 Đăng / hẹn giờ bài", "📝 Ghi nhớ + báo kết quả"], ["📝 Ghi nhớ + báo kết quả", "📨 Báo kết quả đăng"],
+      ["⬆️ Tải ảnh lên Facebook (ẩn)", "🧩 Ghép bài"], ["🧩 Ghép bài", "📢 Đăng bài"],
+      ["📢 Đăng bài", "📝 Ghi nhớ id đã đăng + báo kết quả"], ["📝 Ghi nhớ id đã đăng + báo kết quả", "📨 Báo kết quả đăng"],
     ],
   });
 }

@@ -11,6 +11,10 @@ chcp 65001 >nul
 title Tiem banh Mitu - n8n
 cd /d "%~dp0"
 
+rem Chan loi tu goi lai: thu muc nay co file n8n.bat, neu thieu dong duoi thi
+rem lenh "npx n8n" se chay nham n8n.bat va mo cua so lap vo han.
+set "NoDefaultCurrentDirectoryInExePath=1"
+
 rem Phien ban n8n da chay thu voi 3 workflow. Doi phien ban thi phai thu lai.
 set "N8N_VERSION=2.49.8"
 set "NO_BROWSER="
@@ -29,6 +33,12 @@ rem n8n dang chay san thi chi mo trinh duyet
 if not defined RELOAD (
   powershell -NoProfile -Command "try{Invoke-WebRequest http://localhost:5678/healthz -UseBasicParsing -TimeoutSec 2 | Out-Null; exit 0}catch{exit 1}"
   if not errorlevel 1 goto openbrowser
+)
+
+rem Mo ngay trang cho - trang tu chuyen sang n8n khi n8n san sang
+if not defined NO_BROWSER (
+  start "" "%~dp0n8n\cho-n8n.html"
+  set "DA_MO_TRANG_CHO=1"
 )
 
 rem ---- Nap khoa / ID tu .env.local vao bien moi truong ----
@@ -88,6 +98,9 @@ if errorlevel 1 (
   pause
   exit /b
 )
+
+rem Trang cho da tu chuyen sang n8n, khong mo them tab nua
+if defined DA_MO_TRANG_CHO exit /b
 
 :openbrowser
 if not defined NO_BROWSER start "" "http://localhost:5678"
