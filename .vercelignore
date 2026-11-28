@@ -11,3 +11,11 @@ dev.js
 .env.local
 AI_AGENT.md
 admin.bat
+
+# n8n (workflow AI tự động) chỉ chạy trên máy, không đưa lên web.
+# n8n-data có chứa khoá đăng nhập n8n.
+n8n/
+n8n-data/
+n8n.bat
+n8n-tu-chay.bat
+WORKFLOW_N8N.md

@@ -1,0 +1,702 @@
+{
+  "id": "MituWf1TraLoi001",
+  "name": "Mitu WF1 · Tự trả lời khách (web + Messenger + comment)",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## WF1 · Tự trả lời khách 24/7\nNhận tin từ **chat trên web**, **Messenger** và **comment Fanpage** → AI trả lời theo kho bánh, Menu hôm nay, **n8n/cau-hinh/faq.txt** và giọng văn.\n- Khách muốn **đặt bánh**: AI hỏi đủ thông tin rồi báo Telegram cho tiệm.\n- **Khiếu nại / câu khó**: AI xoa dịu khách + báo Telegram.\n- Chủ tiệm tự nhắn trong hộp thư Page → bot **tự im 6 tiếng** với khách đó.\n- Giá AI nói phải khớp kho, không khớp thì đổi sang câu an toàn.",
+        "width": 640,
+        "height": 300,
+        "color": 4
+      },
+      "id": "0d3a657e-d9b7-4e3f-8572-0419d3c7cc41",
+      "name": "Ghi chú b17d74",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        -330
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "mitu-chat",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "14946ab5-2458-48a2-979a-3687bd90b3d1",
+      "name": "💬 Tin nhắn từ chat web",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        240,
+        0
+      ],
+      "webhookId": "432c56db-ab56-41b8-874f-fe805e7f75c6"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ===== Hàm dùng chung (giống nhau ở mọi workflow Mitu) =====\nconst FIRESTORE = \"https://firestore.googleapis.com/v1/projects/mitu-bakery/databases/(default)/documents\";\nfunction fsVal(v) {\n  if (!v) return null;\n  if (\"stringValue\" in v) return v.stringValue;\n  if (\"integerValue\" in v) return Number(v.integerValue);\n  if (\"doubleValue\" in v) return v.doubleValue;\n  if (\"booleanValue\" in v) return v.booleanValue;\n  if (\"arrayValue\" in v) return (v.arrayValue.values || []).map(fsVal);\n  if (\"mapValue\" in v) { const o = {}; for (const [k, x] of Object.entries(v.mapValue.fields || {})) o[k] = fsVal(x); return o; }\n  if (\"timestampValue\" in v) return v.timestampValue;\n  return null;\n}\nfunction fsDoc(d) { const o = { id: d.name.split(\"/\").pop() }; for (const [k, x] of Object.entries(d.fields || {})) o[k] = fsVal(x); return o; }\nasync function loadShop(helpers) {\n  const get = url => helpers.httpRequest({ url, json: true });\n  const [cakesRes, todayRes, shopRes] = await Promise.all([\n    get(FIRESTORE + \"/cakes?pageSize=300\"), get(FIRESTORE + \"/settings/today\"), get(FIRESTORE + \"/settings/shop\"),\n  ]);\n  const cakes = (cakesRes.documents || []).map(fsDoc).filter(c => c.name);\n  return { cakes, today: fsDoc(todayRes), shop: fsDoc(shopRes) };\n}\nfunction readConfig(file) {\n  const fsm = require(\"fs\"), p = require(\"path\");\n  const full = p.join($env.MITU_DIR || \"\", \"n8n\", \"cau-hinh\", file);\n  try {\n    return fsm.readFileSync(full, \"utf8\").split(/\\r?\\n/).filter(l => !l.trim().startsWith(\"#\")).join(\"\\n\").trim();\n  } catch (e) { throw new Error(\"Không đọc được file \" + full + \" (mở n8n bằng n8n.bat nhé). \" + e.message); }\n}\n/** doi-thu.txt: dòng \"@khu-vuc: …\", \"@tu-tim: 5\", còn lại là \"Tên | link\" */\nfunction parseDoiThu(text) {\n  const cfg = { khu_vuc: \"Vạn Phúc, Hà Đông, Hà Nội\", tu_tim: 5, thu_cong: [] };\n  for (const raw of String(text || \"\").split(\"\\n\")) {\n    const l = raw.trim();\n    if (!l) continue;\n    const m = l.match(/^@\\s*([^:]+?)\\s*:\\s*(.*)$/);\n    if (m) {\n      const key = norm(m[1]).replace(/[\\s_]/g, \"-\");\n      if (key === \"khu-vuc\" && m[2].trim()) cfg.khu_vuc = m[2].trim();\n      if (key === \"tu-tim\") cfg.tu_tim = Math.max(0, Math.min(8, parseInt(m[2], 10) || 0));\n      continue;\n    }\n    const [ten, link = \"\"] = l.split(\"|\").map(s => s.trim());\n    if (ten) cfg.thu_cong.push({ ten, link: link.replace(/\\s+#.*$/, \"\") });\n  }\n  return cfg;\n}\nconst CATEGORY = { birthday: \"Bánh sinh nhật\", mini: \"Bánh Mini\", fruit: \"Bánh Hoa quả\", square: \"Bánh Vuông\", male: \"Bánh cho Nam\", female: \"Bánh cho Nữ\", boy: \"Bánh cho Bé Trai\", girl: \"Bánh cho Bé Gái\", troll: \"Bánh Troll & Vui nhộn\" };\nconst vnd = n => Number(n || 0).toLocaleString(\"vi-VN\") + \"đ\";\nconst norm = s => String(s || \"\").normalize(\"NFD\").replace(/[̀-ͯ]/g, \"\").replace(/đ/gi, \"d\").toLowerCase().replace(/\\s+/g, \" \").trim();\nconst escHtml = s => String(s ?? \"\").replace(/&/g, \"&amp;\").replace(/</g, \"&lt;\").replace(/>/g, \"&gt;\");\nconst cakeLine = c => `${c.name} | ${CATEGORY[c.category] || c.category || \"\"} | ${vnd(c.price)}${c.bestseller ? \" | bán chạy\" : \"\"}${c.desc ? \" | \" + String(c.desc).slice(0, 90) : \"\"}`;\nfunction geminiText(r) {\n  const parts = (r && r.candidates && r.candidates[0] && r.candidates[0].content && r.candidates[0].content.parts) || [];\n  return parts.filter(p => p.text && !p.thought).map(p => p.text).join(\"\").trim();\n}\nfunction geminiJson(r) {\n  const t = geminiText(r).replace(/^```(?:json)?\\s*/i, \"\").replace(/```\\s*$/, \"\");\n  return JSON.parse(t);\n}\n/** Tìm số tiền trong câu: 350.000đ, 350k, 350 nghìn, 1.2tr … → số VNĐ */\nfunction moneyIn(text) {\n  const out = [];\n  const re = /(\\d{1,3}(?:[.,]\\d{3})+|\\d+(?:[.,]\\d+)?)\\s*(k|nghìn|ngàn|tr|triệu|đ|vnđ|vnd|đồng)(?![a-zà-ỹ])/gi;\n  let m;\n  while ((m = re.exec(String(text || \"\")))) {\n    const unit = m[2].toLowerCase();\n    let n = /[.,]\\d{3}(?!\\d)/.test(m[1]) && !/^(k|nghìn|ngàn|tr|triệu)$/.test(unit)\n      ? Number(m[1].replace(/[.,]/g, \"\")) : Number(m[1].replace(\",\", \".\"));\n    if (/^(k|nghìn|ngàn)$/.test(unit)) n *= 1000;\n    if (/^(tr|triệu)$/.test(unit)) n *= 1000000;\n    if (n >= 1000) out.push(Math.round(n));\n  }\n  return out;\n}\n// Trạng thái lưu ra file (n8n-data/mitu-trang-thai.json) – giữ được cả khi bấm chạy tay\nfunction stateFile() { return require(\"path\").join($env.MITU_DIR || \"\", \"n8n-data\", \"mitu-trang-thai.json\"); }\nfunction readState() { try { return JSON.parse(require(\"fs\").readFileSync(stateFile(), \"utf8\")); } catch (e) { return {}; } }\nfunction writeState(patch) {\n  const s = { ...readState(), ...patch };\n  try { require(\"fs\").mkdirSync(require(\"path\").dirname(stateFile()), { recursive: true }); require(\"fs\").writeFileSync(stateFile(), JSON.stringify(s, null, 2)); } catch (e) { /* bỏ qua */ }\n  return s;\n}\nconst sameDay = (a, b) => { const p = s => String(s || \"\").split(\"/\").map(Number).join(\"/\"); return p(a) === p(b); };\n// ===== Hết phần dùng chung =====\n\nconst store = $getWorkflowStaticData(\"global\");\n  const b = $json.body || {};\n  const sid = String(b.session_id || \"\").slice(0, 80) || \"web-khach\";\n  const msg = String(b.message || \"\").trim().slice(0, 500);\n  const now = Date.now();\n  store.web_rate = store.web_rate || {};\n  const hits = (store.web_rate[sid] || []).filter(t => now - t < 3600e3);\n  hits.push(now);\n  store.web_rate[sid] = hits;\n  for (const k of Object.keys(store.web_rate)) if (!store.web_rate[k].some(t => now - t < 3600e3)) delete store.web_rate[k];\n  return [{ json: { kenh: \"web\", sender_id: sid, ten: \"\", tin_nhan: msg, qua_gioi_han: hits.length > 30 || !msg } }];\n"
+      },
+      "id": "82fe17f1-9afc-46e9-8bc8-22f918c923f4",
+      "name": "🧹 Chuẩn hoá tin web",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "b433c75a-f14f-467f-8658-9a7d4f331b12",
+              "leftValue": "={{ $json.qua_gioi_han }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "78bd6cb9-e72c-4da6-8058-9dcfd1664cce",
+      "name": "Nhắn quá nhiều?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        720,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ reply: 'Bạn nhắn nhanh quá Mitu đọc không kịp 😅 Đợi chút rồi nhắn tiếp, hoặc nhắn Zalo 0936290932 nhé!', cakes: [] }) }}",
+        "options": {}
+      },
+      "id": "dd0f8a55-8e6f-419f-b4ea-a0eaa100c0f1",
+      "name": "↩️ Trả lời: nhắn chậm lại",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        960,
+        -120
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "mitu-facebook",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "ba82e1b8-797d-43ce-9e89-ecdecdddb694",
+      "name": "📘 Facebook xác minh (GET)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        240,
+        360
+      ],
+      "webhookId": "44d2d387-2627-424e-aae8-2ecd81346f47"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.query['hub.verify_token'] === $env.FACEBOOK_VERIFY_TOKEN ? $json.query['hub.challenge'] : 'sai verify token' }}",
+        "options": {}
+      },
+      "id": "f3e7c7cc-5e56-4907-96ee-9e63d6c9b4b9",
+      "name": "↩️ Trả mã xác minh",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        480,
+        360
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "mitu-facebook",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "21f457cf-e557-4d25-9245-bee03014a3a2",
+      "name": "📘 Facebook gửi tin / comment",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        240,
+        540
+      ],
+      "webhookId": "955a6d66-62f1-4cfe-a6ce-dc78a8904a46"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "EVENT_RECEIVED",
+        "options": {}
+      },
+      "id": "ec3199e0-cfe6-4af9-8667-bb8d9cca1c64",
+      "name": "↩️ Báo Facebook đã nhận",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        480,
+        540
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// ===== Hàm dùng chung (giống nhau ở mọi workflow Mitu) =====\nconst FIRESTORE = \"https://firestore.googleapis.com/v1/projects/mitu-bakery/databases/(default)/documents\";\nfunction fsVal(v) {\n  if (!v) return null;\n  if (\"stringValue\" in v) return v.stringValue;\n  if (\"integerValue\" in v) return Number(v.integerValue);\n  if (\"doubleValue\" in v) return v.doubleValue;\n  if (\"booleanValue\" in v) return v.booleanValue;\n  if (\"arrayValue\" in v) return (v.arrayValue.values || []).map(fsVal);\n  if (\"mapValue\" in v) { const o = {}; for (const [k, x] of Object.entries(v.mapValue.fields || {})) o[k] = fsVal(x); return o; }\n  if (\"timestampValue\" in v) return v.timestampValue;\n  return null;\n}\nfunction fsDoc(d) { const o = { id: d.name.split(\"/\").pop() }; for (const [k, x] of Object.entries(d.fields || {})) o[k] = fsVal(x); return o; }\nasync function loadShop(helpers) {\n  const get = url => helpers.httpRequest({ url, json: true });\n  const [cakesRes, todayRes, shopRes] = await Promise.all([\n    get(FIRESTORE + \"/cakes?pageSize=300\"), get(FIRESTORE + \"/settings/today\"), get(FIRESTORE + \"/settings/shop\"),\n  ]);\n  const cakes = (cakesRes.documents || []).map(fsDoc).filter(c => c.name);\n  return { cakes, today: fsDoc(todayRes), shop: fsDoc(shopRes) };\n}\nfunction readConfig(file) {\n  const fsm = require(\"fs\"), p = require(\"path\");\n  const full = p.join($env.MITU_DIR || \"\", \"n8n\", \"cau-hinh\", file);\n  try {\n    return fsm.readFileSync(full, \"utf8\").split(/\\r?\\n/).filter(l => !l.trim().startsWith(\"#\")).join(\"\\n\").trim();\n  } catch (e) { throw new Error(\"Không đọc được file \" + full + \" (mở n8n bằng n8n.bat nhé). \" + e.message); }\n}\n/** doi-thu.txt: dòng \"@khu-vuc: …\", \"@tu-tim: 5\", còn lại là \"Tên | link\" */\nfunction parseDoiThu(text) {\n  const cfg = { khu_vuc: \"Vạn Phúc, Hà Đông, Hà Nội\", tu_tim: 5, thu_cong: [] };\n  for (const raw of String(text || \"\").split(\"\\n\")) {\n    const l = raw.trim();\n    if (!l) continue;\n    const m = l.match(/^@\\s*([^:]+?)\\s*:\\s*(.*)$/);\n    if (m) {\n      const key = norm(m[1]).replace(/[\\s_]/g, \"-\");\n      if (key === \"khu-vuc\" && m[2].trim()) cfg.khu_vuc = m[2].trim();\n      if (key === \"tu-tim\") cfg.tu_tim = Math.max(0, Math.min(8, parseInt(m[2], 10) || 0));\n      continue;\n    }\n    const [ten, link = \"\"] = l.split(\"|\").map(s => s.trim());\n    if (ten) cfg.thu_cong.push({ ten, link: link.replace(/\\s+#.*$/, \"\") });\n  }\n  return cfg;\n}\nconst CATEGORY = { birthday: \"Bánh sinh nhật\", mini: \"Bánh Mini\", fruit: \"Bánh Hoa quả\", square: \"Bánh Vuông\", male: \"Bánh cho Nam\", female: \"Bánh cho Nữ\", boy: \"Bánh cho Bé Trai\", girl: \"Bánh cho Bé Gái\", troll: \"Bánh Troll & Vui nhộn\" };\nconst vnd = n => Number(n || 0).toLocaleString(\"vi-VN\") + \"đ\";\nconst norm = s => String(s || \"\").normalize(\"NFD\").replace(/[̀-ͯ]/g, \"\").replace(/đ/gi, \"d\").toLowerCase().replace(/\\s+/g, \" \").trim();\nconst escHtml = s => String(s ?? \"\").replace(/&/g, \"&amp;\").replace(/</g, \"&lt;\").replace(/>/g, \"&gt;\");\nconst cakeLine = c => `${c.name} | ${CATEGORY[c.category] || c.category || \"\"} | ${vnd(c.price)}${c.bestseller ? \" | bán chạy\" : \"\"}${c.desc ? \" | \" + String(c.desc).slice(0, 90) : \"\"}`;\nfunction geminiText(r) {\n  const parts = (r && r.candidates && r.candidates[0] && r.candidates[0].content && r.candidates[0].content.parts) || [];\n  return parts.filter(p => p.text && !p.thought).map(p => p.text).join(\"\").trim();\n}\nfunction geminiJson(r) {\n  const t = geminiText(r).replace(/^```(?:json)?\\s*/i, \"\").replace(/```\\s*$/, \"\");\n  return JSON.parse(t);\n}\n/** Tìm số tiền trong câu: 350.000đ, 350k, 350 nghìn, 1.2tr … → số VNĐ */\nfunction moneyIn(text) {\n  const out = [];\n  const re = /(\\d{1,3}(?:[.,]\\d{3})+|\\d+(?:[.,]\\d+)?)\\s*(k|nghìn|ngàn|tr|triệu|đ|vnđ|vnd|đồng)(?![a-zà-ỹ])/gi;\n  let m;\n  while ((m = re.exec(String(text || \"\")))) {\n    const unit = m[2].toLowerCase();\n    let n = /[.,]\\d{3}(?!\\d)/.test(m[1]) && !/^(k|nghìn|ngàn|tr|triệu)$/.test(unit)\n      ? Number(m[1].replace(/[.,]/g, \"\")) : Number(m[1].replace(\",\", \".\"));\n    if (/^(k|nghìn|ngàn)$/.test(unit)) n *= 1000;\n    if (/^(tr|triệu)$/.test(unit)) n *= 1000000;\n    if (n >= 1000) out.push(Math.round(n));\n  }\n  return out;\n}\n// Trạng thái lưu ra file (n8n-data/mitu-trang-thai.json) – giữ được cả khi bấm chạy tay\nfunction stateFile() { return require(\"path\").join($env.MITU_DIR || \"\", \"n8n-data\", \"mitu-trang-thai.json\"); }\nfunction readState() { try { return JSON.parse(require(\"fs\").readFileSync(stateFile(), \"utf8\")); } catch (e) { return {}; } }\nfunction writeState(patch) {\n  const s = { ...readState(), ...patch };\n  try { require(\"fs\").mkdirSync(require(\"path\").dirname(stateFile()), { recursive: true }); require(\"fs\").writeFileSync(stateFile(), JSON.stringify(s, null, 2)); } catch (e) { /* bỏ qua */ }\n  return s;\n}\nconst sameDay = (a, b) => { const p = s => String(s || \"\").split(\"/\").map(Number).join(\"/\"); return p(a) === p(b); };\n// ===== Hết phần dùng chung =====\n\nconst ev0 = $(\"📘 Facebook gửi tin / comment\").first().json;\n  const store = $getWorkflowStaticData(\"global\");\n  store.tam_dung = store.tam_dung || {};\n  const PAGE = String($env.FACEBOOK_PAGE_ID || \"\");\n  const now = Date.now();\n  const out = [];\n  for (const entry of (ev0.body && ev0.body.entry) || []) {\n    for (const ev of entry.messaging || []) {\n      const m = ev.message;\n      if (!m) continue;\n      if (m.is_echo) {\n        // Người thật (chủ tiệm) nhắn từ hộp thư Page → bot nhường 6 tiếng\n        if (!m.app_id && ev.recipient && ev.recipient.id) store.tam_dung[ev.recipient.id] = now + 6 * 3600e3;\n        continue;\n      }\n      if (!m.text) continue;\n      const sid = ev.sender && ev.sender.id;\n      if (!sid || (store.tam_dung[sid] || 0) > now) continue;\n      out.push({ json: { kenh: \"messenger\", sender_id: sid, ten: \"\", tin_nhan: String(m.text).slice(0, 800) } });\n    }\n    for (const ch of entry.changes || []) {\n      const v = ch.value || {};\n      if (ch.field !== \"feed\" || v.item !== \"comment\" || v.verb !== \"add\") continue;\n      if (!v.message || !v.from || String(v.from.id) === PAGE) continue; // bỏ comment của chính Page\n      out.push({ json: { kenh: \"comment\", sender_id: String(v.from.id), ten: v.from.name || \"\", tin_nhan: String(v.message).slice(0, 800), comment_id: v.comment_id, post_id: v.post_id } });\n    }\n  }\n  for (const k of Object.keys(store.tam_dung)) if (store.tam_dung[k] < now) delete store.tam_dung[k];\n  return out;\n"
+      },
+      "id": "e083b001-84c1-4edf-984c-14cc2d99cc64",
+      "name": "🧹 Lọc sự kiện Facebook",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        540
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// ===== Hàm dùng chung (giống nhau ở mọi workflow Mitu) =====\nconst FIRESTORE = \"https://firestore.googleapis.com/v1/projects/mitu-bakery/databases/(default)/documents\";\nfunction fsVal(v) {\n  if (!v) return null;\n  if (\"stringValue\" in v) return v.stringValue;\n  if (\"integerValue\" in v) return Number(v.integerValue);\n  if (\"doubleValue\" in v) return v.doubleValue;\n  if (\"booleanValue\" in v) return v.booleanValue;\n  if (\"arrayValue\" in v) return (v.arrayValue.values || []).map(fsVal);\n  if (\"mapValue\" in v) { const o = {}; for (const [k, x] of Object.entries(v.mapValue.fields || {})) o[k] = fsVal(x); return o; }\n  if (\"timestampValue\" in v) return v.timestampValue;\n  return null;\n}\nfunction fsDoc(d) { const o = { id: d.name.split(\"/\").pop() }; for (const [k, x] of Object.entries(d.fields || {})) o[k] = fsVal(x); return o; }\nasync function loadShop(helpers) {\n  const get = url => helpers.httpRequest({ url, json: true });\n  const [cakesRes, todayRes, shopRes] = await Promise.all([\n    get(FIRESTORE + \"/cakes?pageSize=300\"), get(FIRESTORE + \"/settings/today\"), get(FIRESTORE + \"/settings/shop\"),\n  ]);\n  const cakes = (cakesRes.documents || []).map(fsDoc).filter(c => c.name);\n  return { cakes, today: fsDoc(todayRes), shop: fsDoc(shopRes) };\n}\nfunction readConfig(file) {\n  const fsm = require(\"fs\"), p = require(\"path\");\n  const full = p.join($env.MITU_DIR || \"\", \"n8n\", \"cau-hinh\", file);\n  try {\n    return fsm.readFileSync(full, \"utf8\").split(/\\r?\\n/).filter(l => !l.trim().startsWith(\"#\")).join(\"\\n\").trim();\n  } catch (e) { throw new Error(\"Không đọc được file \" + full + \" (mở n8n bằng n8n.bat nhé). \" + e.message); }\n}\n/** doi-thu.txt: dòng \"@khu-vuc: …\", \"@tu-tim: 5\", còn lại là \"Tên | link\" */\nfunction parseDoiThu(text) {\n  const cfg = { khu_vuc: \"Vạn Phúc, Hà Đông, Hà Nội\", tu_tim: 5, thu_cong: [] };\n  for (const raw of String(text || \"\").split(\"\\n\")) {\n    const l = raw.trim();\n    if (!l) continue;\n    const m = l.match(/^@\\s*([^:]+?)\\s*:\\s*(.*)$/);\n    if (m) {\n      const key = norm(m[1]).replace(/[\\s_]/g, \"-\");\n      if (key === \"khu-vuc\" && m[2].trim()) cfg.khu_vuc = m[2].trim();\n      if (key === \"tu-tim\") cfg.tu_tim = Math.max(0, Math.min(8, parseInt(m[2], 10) || 0));\n      continue;\n    }\n    const [ten, link = \"\"] = l.split(\"|\").map(s => s.trim());\n    if (ten) cfg.thu_cong.push({ ten, link: link.replace(/\\s+#.*$/, \"\") });\n  }\n  return cfg;\n}\nconst CATEGORY = { birthday: \"Bánh sinh nhật\", mini: \"Bánh Mini\", fruit: \"Bánh Hoa quả\", square: \"Bánh Vuông\", male: \"Bánh cho Nam\", female: \"Bánh cho Nữ\", boy: \"Bánh cho Bé Trai\", girl: \"Bánh cho Bé Gái\", troll: \"Bánh Troll & Vui nhộn\" };\nconst vnd = n => Number(n || 0).toLocaleString(\"vi-VN\") + \"đ\";\nconst norm = s => String(s || \"\").normalize(\"NFD\").replace(/[̀-ͯ]/g, \"\").replace(/đ/gi, \"d\").toLowerCase().replace(/\\s+/g, \" \").trim();\nconst escHtml = s => String(s ?? \"\").replace(/&/g, \"&amp;\").replace(/</g, \"&lt;\").replace(/>/g, \"&gt;\");\nconst cakeLine = c => `${c.name} | ${CATEGORY[c.category] || c.category || \"\"} | ${vnd(c.price)}${c.bestseller ? \" | bán chạy\" : \"\"}${c.desc ? \" | \" + String(c.desc).slice(0, 90) : \"\"}`;\nfunction geminiText(r) {\n  const parts = (r && r.candidates && r.candidates[0] && r.candidates[0].content && r.candidates[0].content.parts) || [];\n  return parts.filter(p => p.text && !p.thought).map(p => p.text).join(\"\").trim();\n}\nfunction geminiJson(r) {\n  const t = geminiText(r).replace(/^```(?:json)?\\s*/i, \"\").replace(/```\\s*$/, \"\");\n  return JSON.parse(t);\n}\n/** Tìm số tiền trong câu: 350.000đ, 350k, 350 nghìn, 1.2tr … → số VNĐ */\nfunction moneyIn(text) {\n  const out = [];\n  const re = /(\\d{1,3}(?:[.,]\\d{3})+|\\d+(?:[.,]\\d+)?)\\s*(k|nghìn|ngàn|tr|triệu|đ|vnđ|vnd|đồng)(?![a-zà-ỹ])/gi;\n  let m;\n  while ((m = re.exec(String(text || \"\")))) {\n    const unit = m[2].toLowerCase();\n    let n = /[.,]\\d{3}(?!\\d)/.test(m[1]) && !/^(k|nghìn|ngàn|tr|triệu)$/.test(unit)\n      ? Number(m[1].replace(/[.,]/g, \"\")) : Number(m[1].replace(\",\", \".\"));\n    if (/^(k|nghìn|ngàn)$/.test(unit)) n *= 1000;\n    if (/^(tr|triệu)$/.test(unit)) n *= 1000000;\n    if (n >= 1000) out.push(Math.round(n));\n  }\n  return out;\n}\n// Trạng thái lưu ra file (n8n-data/mitu-trang-thai.json) – giữ được cả khi bấm chạy tay\nfunction stateFile() { return require(\"path\").join($env.MITU_DIR || \"\", \"n8n-data\", \"mitu-trang-thai.json\"); }\nfunction readState() { try { return JSON.parse(require(\"fs\").readFileSync(stateFile(), \"utf8\")); } catch (e) { return {}; } }\nfunction writeState(patch) {\n  const s = { ...readState(), ...patch };\n  try { require(\"fs\").mkdirSync(require(\"path\").dirname(stateFile()), { recursive: true }); require(\"fs\").writeFileSync(stateFile(), JSON.stringify(s, null, 2)); } catch (e) { /* bỏ qua */ }\n  return s;\n}\nconst sameDay = (a, b) => { const p = s => String(s || \"\").split(\"/\").map(Number).join(\"/\"); return p(a) === p(b); };\n// ===== Hết phần dùng chung =====\n\nconst store = $getWorkflowStaticData(\"global\");\n  const now = Date.now();\n  // Dữ liệu tiệm lưu tạm 10 phút cho nhanh và đỡ gọi Firestore\n  if (!store.cache || now - store.cache.at > 10 * 60e3) {\n    const s = await loadShop(this.helpers);\n    store.cache = { at: now, ...s, faq: readConfig(\"faq.txt\"), voice: readConfig(\"giong-van.txt\") };\n  }\n  const { cakes, today, shop, faq, voice } = store.cache;\n  const todayKey = $now.setZone(\"Asia/Ho_Chi_Minh\").toFormat(\"dd/MM/yyyy\");\n  const menu = sameDay(today.date, todayKey) ? (today.ids || []).map(id => cakes.find(c => c.id === id)).filter(Boolean) : [];\n  store.lich_su = store.lich_su || {};\n  for (const k of Object.keys(store.lich_su)) if (now - store.lich_su[k].at > 24 * 3600e3) delete store.lich_su[k];\n  const out = [];\n  for (const it of $input.all()) {\n    const t = it.json;\n    const hist = (store.lich_su[t.kenh + \":\" + t.sender_id] || { turns: [] }).turns.slice(-8);\n    // Comment: đọc nội dung bài viết để biết khách hỏi \"bánh này\" là bánh nào\n    let post = \"\";\n    if (t.kenh === \"comment\" && t.post_id && $env.FACEBOOK_PAGE_TOKEN) {\n      try {\n        const p = await this.helpers.httpRequest({ url: `https://graph.facebook.com/${$env.FACEBOOK_GRAPH_VERSION || \"v23.0\"}/${t.post_id}`, qs: { fields: \"message\", access_token: $env.FACEBOOK_PAGE_TOKEN }, json: true });\n        post = String(p.message || \"\").slice(0, 600);\n      } catch (e) { post = \"\"; }\n    }\n    const sys = `Bạn là nhân viên tư vấn của ${shop.shopName || \"Tiệm bánh Mitu\"} (bánh kem handmade). Bạn đang trả lời khách qua ${t.kenh === \"web\" ? \"khung chat trên website\" : t.kenh === \"messenger\" ? \"Messenger của Fanpage\" : \"comment trên Fanpage\"}.\nHôm nay: ${todayKey}.${post ? `\\nKhách comment dưới bài viết này của Fanpage:\\n\"\"\"${post}\"\"\"` : \"\"}\n\nGIỌNG VĂN:\n${voice}\n\nTHÔNG TIN TIỆM: địa chỉ ${shop.shopAddress}; hotline/Zalo ${shop.zaloPhone}.\nCÂU HỎI THƯỜNG GẶP:\n${faq}\n\nMENU HÔM NAY (có sẵn, lấy được luôn): ${menu.length ? menu.map(c => c.name + \" \" + vnd(c.price)).join(\"; \") : \"chưa cập nhật\"}\n\nKHO BÁNH (tên | danh mục | giá | mô tả) – đặt trước được:\n${cakes.map(cakeLine).join(\"\\n\")}\n\nQUY TẮC:\n- Trả lời ngắn (tối đa 4 câu), đúng trọng tâm, tiếng Việt có dấu.\n- Giá và tên bánh chỉ lấy từ KHO BÁNH. Bánh theo mẫu riêng không có trong kho: nói giá tùy mẫu, mời khách gửi ảnh mẫu qua Zalo để tiệm báo giá.\n- Điều gì không có trong dữ liệu trên: không đoán, nói Mitu sẽ kiểm tra và báo lại, đặt can_bao_chu = true.\n- banh_goi_y: tối đa 3 tên bánh trong kho phù hợp với câu hỏi (chép đúng tên), không có thì để trống.\n- Khách muốn đặt bánh: hỏi dần cho đủ ngày giờ lấy, bánh/mẫu, size, chữ trên bánh, số điện thoại; ghi vào don_hang. Khi đã đủ thì xác nhận lại với khách, nói tiệm sẽ liên hệ chốt đơn, và đặt can_bao_chu = true.\n- Khách phàn nàn, bánh lỗi, đòi hoàn tiền, hoặc bực bội: xin lỗi chân thành, nói chủ tiệm sẽ liên hệ ngay, can_bao_chu = true.\n- Comment trên Fanpage: có 2 câu trả lời khác nhau.\n  + tra_loi_cong_khai: 1 câu ngắn hiện dưới comment, không nêu giá (VD: \"Mitu đã inbox bạn rồi nha 💛\").\n  + tra_loi: tin nhắn riêng gửi vào inbox của khách — chào khách, trả lời thẳng câu hỏi (giá, mẫu…). KHÔNG viết kiểu \"Mitu đã nhắn riêng cho bạn\" trong tra_loi.\n  + Khách hỏi \"bánh này\" mà không rõ bánh nào (bài viết không nói): hỏi lại khách hoặc mời gửi ảnh mẫu.\n  + Khách hỏi giá / đặt bánh / xin tư vấn → nhan_rieng = true; chỉ khen hoặc thả cảm xúc → nhan_rieng = false.\n- Không hứa khuyến mãi, giảm giá, freeship nếu dữ liệu không có.`;\n    const S = (props, req) => ({ type: \"OBJECT\", properties: props, required: req });\n    const STR = { type: \"STRING\" };\n    const schema = S({\n      tra_loi: STR, tra_loi_cong_khai: STR, nhan_rieng: { type: \"BOOLEAN\" },\n      banh_goi_y: { type: \"ARRAY\", items: STR },\n      y_dinh: { type: \"STRING\", enum: [\"hoi_thong_tin\", \"tu_van_chon_banh\", \"dat_banh\", \"khieu_nai\", \"khen\", \"khac\"] },\n      can_bao_chu: { type: \"BOOLEAN\" }, ly_do_bao_chu: STR,\n      don_hang: S({ ngay_lay: STR, banh: STR, size: STR, chu_tren_banh: STR, so_dien_thoai: STR, ghi_chu: STR }, []),\n    }, [\"tra_loi\", \"y_dinh\", \"can_bao_chu\", \"banh_goi_y\"]);\n    out.push({ json: { ...t, model: $env.GEMINI_MODEL_CHAT || $env.GEMINI_MODEL || \"gemini-3.6-flash\", gemini_body: {\n      systemInstruction: { parts: [{ text: sys }] },\n      contents: [...hist.map(h => ({ role: h.role === \"khach\" ? \"user\" : \"model\", parts: [{ text: h.text }] })), { role: \"user\", parts: [{ text: t.tin_nhan }] }],\n      generationConfig: { temperature: 0.5, responseMimeType: \"application/json\", responseSchema: schema, thinkingConfig: { thinkingLevel: \"low\" } },\n    } } });\n  }\n  return out;\n"
+      },
+      "id": "03a4aeb6-6699-4af9-88ef-1c5493d97f11",
+      "name": "🧠 Chuẩn bị câu hỏi cho AI",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        360
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://generativelanguage.googleapis.com/v1beta/models/{{ $json.model }}:generateContent",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-goog-api-key",
+              "value": "={{ $env.GEMINI_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.gemini_body) }}",
+        "options": {
+          "timeout": 20000
+        }
+      },
+      "id": "803b64ad-58f6-4ac5-aa8b-34d27360f0e3",
+      "name": "🤖 AI trả lời",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1440,
+        360
+      ],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 3000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ===== Hàm dùng chung (giống nhau ở mọi workflow Mitu) =====\nconst FIRESTORE = \"https://firestore.googleapis.com/v1/projects/mitu-bakery/databases/(default)/documents\";\nfunction fsVal(v) {\n  if (!v) return null;\n  if (\"stringValue\" in v) return v.stringValue;\n  if (\"integerValue\" in v) return Number(v.integerValue);\n  if (\"doubleValue\" in v) return v.doubleValue;\n  if (\"booleanValue\" in v) return v.booleanValue;\n  if (\"arrayValue\" in v) return (v.arrayValue.values || []).map(fsVal);\n  if (\"mapValue\" in v) { const o = {}; for (const [k, x] of Object.entries(v.mapValue.fields || {})) o[k] = fsVal(x); return o; }\n  if (\"timestampValue\" in v) return v.timestampValue;\n  return null;\n}\nfunction fsDoc(d) { const o = { id: d.name.split(\"/\").pop() }; for (const [k, x] of Object.entries(d.fields || {})) o[k] = fsVal(x); return o; }\nasync function loadShop(helpers) {\n  const get = url => helpers.httpRequest({ url, json: true });\n  const [cakesRes, todayRes, shopRes] = await Promise.all([\n    get(FIRESTORE + \"/cakes?pageSize=300\"), get(FIRESTORE + \"/settings/today\"), get(FIRESTORE + \"/settings/shop\"),\n  ]);\n  const cakes = (cakesRes.documents || []).map(fsDoc).filter(c => c.name);\n  return { cakes, today: fsDoc(todayRes), shop: fsDoc(shopRes) };\n}\nfunction readConfig(file) {\n  const fsm = require(\"fs\"), p = require(\"path\");\n  const full = p.join($env.MITU_DIR || \"\", \"n8n\", \"cau-hinh\", file);\n  try {\n    return fsm.readFileSync(full, \"utf8\").split(/\\r?\\n/).filter(l => !l.trim().startsWith(\"#\")).join(\"\\n\").trim();\n  } catch (e) { throw new Error(\"Không đọc được file \" + full + \" (mở n8n bằng n8n.bat nhé). \" + e.message); }\n}\n/** doi-thu.txt: dòng \"@khu-vuc: …\", \"@tu-tim: 5\", còn lại là \"Tên | link\" */\nfunction parseDoiThu(text) {\n  const cfg = { khu_vuc: \"Vạn Phúc, Hà Đông, Hà Nội\", tu_tim: 5, thu_cong: [] };\n  for (const raw of String(text || \"\").split(\"\\n\")) {\n    const l = raw.trim();\n    if (!l) continue;\n    const m = l.match(/^@\\s*([^:]+?)\\s*:\\s*(.*)$/);\n    if (m) {\n      const key = norm(m[1]).replace(/[\\s_]/g, \"-\");\n      if (key === \"khu-vuc\" && m[2].trim()) cfg.khu_vuc = m[2].trim();\n      if (key === \"tu-tim\") cfg.tu_tim = Math.max(0, Math.min(8, parseInt(m[2], 10) || 0));\n      continue;\n    }\n    const [ten, link = \"\"] = l.split(\"|\").map(s => s.trim());\n    if (ten) cfg.thu_cong.push({ ten, link: link.replace(/\\s+#.*$/, \"\") });\n  }\n  return cfg;\n}\nconst CATEGORY = { birthday: \"Bánh sinh nhật\", mini: \"Bánh Mini\", fruit: \"Bánh Hoa quả\", square: \"Bánh Vuông\", male: \"Bánh cho Nam\", female: \"Bánh cho Nữ\", boy: \"Bánh cho Bé Trai\", girl: \"Bánh cho Bé Gái\", troll: \"Bánh Troll & Vui nhộn\" };\nconst vnd = n => Number(n || 0).toLocaleString(\"vi-VN\") + \"đ\";\nconst norm = s => String(s || \"\").normalize(\"NFD\").replace(/[̀-ͯ]/g, \"\").replace(/đ/gi, \"d\").toLowerCase().replace(/\\s+/g, \" \").trim();\nconst escHtml = s => String(s ?? \"\").replace(/&/g, \"&amp;\").replace(/</g, \"&lt;\").replace(/>/g, \"&gt;\");\nconst cakeLine = c => `${c.name} | ${CATEGORY[c.category] || c.category || \"\"} | ${vnd(c.price)}${c.bestseller ? \" | bán chạy\" : \"\"}${c.desc ? \" | \" + String(c.desc).slice(0, 90) : \"\"}`;\nfunction geminiText(r) {\n  const parts = (r && r.candidates && r.candidates[0] && r.candidates[0].content && r.candidates[0].content.parts) || [];\n  return parts.filter(p => p.text && !p.thought).map(p => p.text).join(\"\").trim();\n}\nfunction geminiJson(r) {\n  const t = geminiText(r).replace(/^```(?:json)?\\s*/i, \"\").replace(/```\\s*$/, \"\");\n  return JSON.parse(t);\n}\n/** Tìm số tiền trong câu: 350.000đ, 350k, 350 nghìn, 1.2tr … → số VNĐ */\nfunction moneyIn(text) {\n  const out = [];\n  const re = /(\\d{1,3}(?:[.,]\\d{3})+|\\d+(?:[.,]\\d+)?)\\s*(k|nghìn|ngàn|tr|triệu|đ|vnđ|vnd|đồng)(?![a-zà-ỹ])/gi;\n  let m;\n  while ((m = re.exec(String(text || \"\")))) {\n    const unit = m[2].toLowerCase();\n    let n = /[.,]\\d{3}(?!\\d)/.test(m[1]) && !/^(k|nghìn|ngàn|tr|triệu)$/.test(unit)\n      ? Number(m[1].replace(/[.,]/g, \"\")) : Number(m[1].replace(\",\", \".\"));\n    if (/^(k|nghìn|ngàn)$/.test(unit)) n *= 1000;\n    if (/^(tr|triệu)$/.test(unit)) n *= 1000000;\n    if (n >= 1000) out.push(Math.round(n));\n  }\n  return out;\n}\n// Trạng thái lưu ra file (n8n-data/mitu-trang-thai.json) – giữ được cả khi bấm chạy tay\nfunction stateFile() { return require(\"path\").join($env.MITU_DIR || \"\", \"n8n-data\", \"mitu-trang-thai.json\"); }\nfunction readState() { try { return JSON.parse(require(\"fs\").readFileSync(stateFile(), \"utf8\")); } catch (e) { return {}; } }\nfunction writeState(patch) {\n  const s = { ...readState(), ...patch };\n  try { require(\"fs\").mkdirSync(require(\"path\").dirname(stateFile()), { recursive: true }); require(\"fs\").writeFileSync(stateFile(), JSON.stringify(s, null, 2)); } catch (e) { /* bỏ qua */ }\n  return s;\n}\nconst sameDay = (a, b) => { const p = s => String(s || \"\").split(\"/\").map(Number).join(\"/\"); return p(a) === p(b); };\n// ===== Hết phần dùng chung =====\n\nconst store = $getWorkflowStaticData(\"global\");\n  const src = $(\"🧠 Chuẩn bị câu hỏi cho AI\").all().map(i => i.json);\n  const { cakes, shop } = store.cache;\n  const zalo = shop.zaloPhone || \"0936290932\";\n  const prices = new Set(cakes.map(c => Number(c.price)));\n  return $input.all().map((it, i) => {\n    const t = src[i];\n    let r, note = \"\";\n    try { r = geminiJson(it.json); } catch (e) { r = null; }\n    if (!r || !r.tra_loi) {\n      r = { tra_loi: `Mitu đang hơi đông khách một chút 🙏 Bạn nhắn Zalo ${zalo} để được trả lời ngay nhé!`, tra_loi_cong_khai: \"Mitu đã nhận được bình luận của bạn ạ 💛\", nhan_rieng: false, banh_goi_y: [], y_dinh: \"khac\", can_bao_chu: true, ly_do_bao_chu: \"AI không trả lời được (lỗi hoặc hết lượt)\" };\n    }\n    const wrong = moneyIn(r.tra_loi).filter(n => !prices.has(n));\n    if (wrong.length) {\n      note = \"AI nói giá không có trong kho: \" + wrong.map(vnd).join(\", \");\n      r.tra_loi = `Dạ để Mitu kiểm tra lại giá chính xác rồi báo bạn ngay nhé! Bạn cũng có thể nhắn Zalo ${zalo} để được báo giá nhanh ạ 💛`;\n      r.can_bao_chu = true;\n      r.ly_do_bao_chu = [r.ly_do_bao_chu, note].filter(Boolean).join(\"; \");\n    }\n    const goi_y = (r.banh_goi_y || []).map(n => cakes.find(c => norm(c.name) === norm(n))).filter(Boolean).slice(0, 3)\n      .map(c => ({ name: c.name, price: c.price, image: c.image }));\n    const key = t.kenh + \":\" + t.sender_id;\n    const h = store.lich_su[key] || { turns: [] };\n    h.turns.push({ role: \"khach\", text: t.tin_nhan }, { role: \"mitu\", text: r.tra_loi });\n    h.turns = h.turns.slice(-12); h.at = Date.now();\n    store.lich_su[key] = h;\n    const d = r.don_hang || {};\n    const donText = Object.values(d).some(Boolean)\n      ? `\\n<b>Đơn:</b> ${escHtml([d.banh, d.size, d.ngay_lay && \"lấy \" + d.ngay_lay, d.chu_tren_banh && \"chữ: \" + d.chu_tren_banh, d.so_dien_thoai && \"SĐT \" + d.so_dien_thoai, d.ghi_chu].filter(Boolean).join(\" · \"))}` : \"\";\n    const kenhText = { web: \"Chat web\", messenger: \"Messenger\", comment: \"Comment Fanpage\" }[t.kenh];\n    const telegram_text = r.can_bao_chu || r.y_dinh === \"khieu_nai\"\n      ? `${r.y_dinh === \"khieu_nai\" ? \"🚨\" : r.y_dinh === \"dat_banh\" ? \"🛒\" : \"🙋\"} <b>${kenhText}${t.ten ? \" – \" + escHtml(t.ten) : \"\"}</b> (${escHtml(r.y_dinh)})\\nKhách: “${escHtml(t.tin_nhan)}”\\nBot đã trả lời: “${escHtml(r.tra_loi)}”${donText}${r.ly_do_bao_chu ? \"\\nLý do báo: \" + escHtml(r.ly_do_bao_chu) : \"\"}${t.kenh === \"messenger\" ? \"\\n👉 Vào hộp thư Page để nhắn tiếp (bot sẽ tự im 6 tiếng).\" : \"\"}`\n      : \"\";\n    return { json: { ...t, gemini_body: undefined, reply: r.tra_loi, reply_public: r.tra_loi_cong_khai || \"Mitu cảm ơn bạn nhiều nha 💛\", nhan_rieng: t.kenh !== \"comment\" || !!r.nhan_rieng, cakes: goi_y, telegram_text } };\n  });\n"
+      },
+      "id": "79f6e887-1e53-48b7-ab6a-cfd97e19cc31",
+      "name": "🛡️ Kiểm tra + ghi nhớ hội thoại",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1680,
+        360
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "8985147e-224c-4d27-9355-b96be81f1838",
+                    "leftValue": "={{ $json.kenh }}",
+                    "rightValue": "web",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Chat web"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "35291dfe-96ea-4c5e-943c-7cebd19753fd",
+                    "leftValue": "={{ $json.kenh }}",
+                    "rightValue": "messenger",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Messenger"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "c98947f7-7eb2-4227-a1e8-2be42c7035af",
+                    "leftValue": "={{ $json.kenh }}",
+                    "rightValue": "comment",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Comment"
+            }
+          ]
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "2214fda0-5d34-4904-b3c3-fd3be8e11fd9",
+      "name": "Trả lời theo kênh",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        1920,
+        360
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ reply: $json.reply, cakes: $json.cakes }) }}",
+        "options": {}
+      },
+      "id": "afc52a14-8696-413e-ba6f-62a42d6105ff",
+      "name": "↩️ Trả lời chat web",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        2160,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/{{ $env.FACEBOOK_GRAPH_VERSION || 'v23.0' }}/me/messages",
+        "options": {
+          "timeout": 20000
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ recipient: { id: $json.sender_id }, messaging_type: 'RESPONSE', message: { text: $json.reply }, access_token: $env.FACEBOOK_PAGE_TOKEN }) }}"
+      },
+      "id": "82581e4c-933e-4d1c-9d1f-8e9c2474e30e",
+      "name": "💌 Gửi tin Messenger",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2160,
+        360
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/{{ $env.FACEBOOK_GRAPH_VERSION || 'v23.0' }}/{{ $json.comment_id }}/comments",
+        "options": {
+          "timeout": 20000
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ message: $json.reply_public, access_token: $env.FACEBOOK_PAGE_TOKEN }) }}"
+      },
+      "id": "cb7d5830-1f5a-44c0-a35e-f16fc4550d87",
+      "name": "💬 Trả lời dưới comment",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2160,
+        530
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "dbdd5fe9-3720-41c0-97ce-bcd961e33da6",
+              "leftValue": "={{ $('Trả lời theo kênh').item.json.nhan_rieng }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "a94e57c7-afd7-4970-80f0-aba7b714beb4",
+      "name": "Cần nhắn riêng?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2400,
+        530
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/{{ $env.FACEBOOK_GRAPH_VERSION || 'v23.0' }}/{{ $env.FACEBOOK_PAGE_ID }}/messages",
+        "options": {
+          "timeout": 20000
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ recipient: { comment_id: $('Trả lời theo kênh').item.json.comment_id }, message: { text: $('Trả lời theo kênh').item.json.reply }, access_token: $env.FACEBOOK_PAGE_TOKEN }) }}"
+      },
+      "id": "fb9e9f00-0fa4-4d76-aeb7-3af124e74176",
+      "name": "💌 Nhắn riêng cho người comment",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2640,
+        530
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "e491d22f-9138-49ab-b501-d7927925f4d7",
+              "leftValue": "={{ !!$json.telegram_text }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "1cc4c238-132e-4dc6-9481-a37ebcfe7e8b",
+      "name": "Cần báo chủ tiệm?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1920,
+        760
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.telegram.org/bot{{ $env.TELEGRAM_BOT_TOKEN }}/sendMessage",
+        "options": {
+          "timeout": 20000
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ chat_id: $env.TELEGRAM_CHAT_ID, text: $json.telegram_text, parse_mode: 'HTML', disable_web_page_preview: true }) }}"
+      },
+      "id": "a84b9294-45c3-44cf-8a8c-7b7f1596dc0c",
+      "name": "📨 Báo chủ tiệm (Telegram)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2160,
+        760
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "connections": {
+    "💬 Tin nhắn từ chat web": {
+      "main": [
+        [
+          {
+            "node": "🧹 Chuẩn hoá tin web",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🧹 Chuẩn hoá tin web": {
+      "main": [
+        [
+          {
+            "node": "Nhắn quá nhiều?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Nhắn quá nhiều?": {
+      "main": [
+        [
+          {
+            "node": "↩️ Trả lời: nhắn chậm lại",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🧠 Chuẩn bị câu hỏi cho AI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📘 Facebook xác minh (GET)": {
+      "main": [
+        [
+          {
+            "node": "↩️ Trả mã xác minh",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📘 Facebook gửi tin / comment": {
+      "main": [
+        [
+          {
+            "node": "↩️ Báo Facebook đã nhận",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "↩️ Báo Facebook đã nhận": {
+      "main": [
+        [
+          {
+            "node": "🧹 Lọc sự kiện Facebook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🧹 Lọc sự kiện Facebook": {
+      "main": [
+        [
+          {
+            "node": "🧠 Chuẩn bị câu hỏi cho AI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🧠 Chuẩn bị câu hỏi cho AI": {
+      "main": [
+        [
+          {
+            "node": "🤖 AI trả lời",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🤖 AI trả lời": {
+      "main": [
+        [
+          {
+            "node": "🛡️ Kiểm tra + ghi nhớ hội thoại",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🛡️ Kiểm tra + ghi nhớ hội thoại": {
+      "main": [
+        [
+          {
+            "node": "Trả lời theo kênh",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Cần báo chủ tiệm?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Trả lời theo kênh": {
+      "main": [
+        [
+          {
+            "node": "↩️ Trả lời chat web",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "💌 Gửi tin Messenger",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "💬 Trả lời dưới comment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "💬 Trả lời dưới comment": {
+      "main": [
+        [
+          {
+            "node": "Cần nhắn riêng?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cần nhắn riêng?": {
+      "main": [
+        [
+          {
+            "node": "💌 Nhắn riêng cho người comment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cần báo chủ tiệm?": {
+      "main": [
+        [
+          {
+            "node": "📨 Báo chủ tiệm (Telegram)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Ho_Chi_Minh",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "pinData": {},
+  "tags": []
+}

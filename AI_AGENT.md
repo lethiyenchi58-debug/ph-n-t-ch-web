@@ -1,5 +1,7 @@
 # AI Agent cho admin – Tiệm bánh Mitu
 
+> Workflow **tự động** (theo dõi đối thủ, tự đăng bài Facebook, tự trả lời khách) chạy trên n8n: xem **`WORKFLOW_N8N.md`**. File này chỉ nói về trợ lý AI trên trang admin.
+
 Trợ lý AI (Gemini) trên trang `admin.html`, làm hai việc:
 
 1. **Thêm bánh từ ảnh**: trong form *Thêm bánh mới*, chọn ảnh rồi bấm **Phân tích ảnh**. Agent nhìn ảnh, tra giá các bánh tương tự trong kho, rồi điền tên, mô tả, danh mục, nhãn và giá vào form (các ô được tô vàng). Admin sửa lại nếu cần rồi bấm **Lưu bánh**. Có nút **Hoàn tác**.

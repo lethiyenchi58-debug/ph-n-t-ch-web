@@ -5,3 +5,8 @@ node_modules/
 .env.local
 .env
 .vercel/
+
+# n8n chạy trên máy: dữ liệu + khoá, báo cáo tự sinh
+n8n-data/
+n8n/bao-cao/
+n8n/cau-hinh/doi-thu-tu-tim.txt

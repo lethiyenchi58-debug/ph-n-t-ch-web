@@ -1,0 +1,15 @@
+# CÂU HỎI THƯỜNG GẶP – workflow WF1 (tự trả lời khách) đọc file này
+# Viết tự nhiên như đang dặn nhân viên mới. AI chỉ trả lời theo những gì có ở đây
+# và trong kho bánh / Menu hôm nay; điều gì không có, AI sẽ hẹn khách để tiệm báo lại.
+# Thông tin còn trống [ ... ] thì SỬA LẠI cho đúng trước khi bật WF1.
+
+Giờ mở cửa: [8:00 – 21:00 hằng ngày].
+Địa chỉ: 173 Vạn Phúc, Hà Đông, Hà Nội. Có chỗ để xe máy trước cửa.
+Đặt bánh: nhắn Zalo 0936290932 hoặc inbox Fanpage. Nên đặt trước [1 ngày]; bánh tạo hình theo yêu cầu nên đặt trước [2–3 ngày].
+Đặt cọc: [cọc 50% khi đặt bánh theo yêu cầu, chuyển khoản qua Zalo].
+Giao hàng: [có ship nội thành Hà Nội qua Grab/Ahamove, phí theo app, khách trả].
+Size bánh: [mini ~10cm (1–2 người), 16cm (4–6 người), 20cm (8–10 người)].
+Cốt bánh: [bông lan vani, socola]; kem tươi ít ngọt.
+Viết chữ, tặng nến, dao, đĩa: [miễn phí].
+Bảo quản: để ngăn mát tủ lạnh, ngon nhất trong [24 giờ].
+Đổi trả: bánh lỗi do tiệm thì Mitu làm lại hoặc hoàn tiền, khách gửi ảnh qua Zalo trong ngày.

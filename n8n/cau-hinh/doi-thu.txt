@@ -1,0 +1,14 @@
+# ĐỐI THỦ – workflow WF2 đọc file này mỗi lần chạy
+# Dòng bắt đầu bằng # là ghi chú, không được đọc.
+
+# ── WF2 TỰ TÌM đối thủ quanh khu vực dưới đây (tìm trên web + AI lọc) ──
+# Khu vực để tìm (đổi được, VD: Hà Đông, Hà Nội  hoặc  Thanh Xuân, Hà Nội)
+@khu-vuc: Vạn Phúc, Hà Đông, Hà Nội
+# Số tiệm tự tìm mỗi tuần (0 = tắt tự tìm, tối đa 8)
+@tu-tim: 5
+# Kết quả tự tìm tuần gần nhất được ghi vào file doi-thu-tu-tim.txt (cùng thư mục).
+
+# ── (TUỲ CHỌN) Tiệm bạn MUỐN theo dõi cố định, luôn được ưu tiên ──
+# Mỗi dòng 1 tiệm:   Tên tiệm | link (Fanpage, TikTok, Google Maps hoặc web)
+# Xoá dấu # ở đầu dòng để dùng. VD:
+# Tiệm bánh ABC | https://www.facebook.com/tiembanhabc

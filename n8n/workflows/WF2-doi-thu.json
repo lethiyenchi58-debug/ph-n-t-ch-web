@@ -1,0 +1,523 @@
+{
+  "id": "MituWf2DoiThu001",
+  "name": "Mitu WF2 · Theo dõi đối thủ (thứ Hai 7:00)",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## WF2 · Theo dõi đối thủ mỗi tuần\nThứ Hai 7:00, n8n tự:\n1. **Tự tìm** tiệm bánh quanh khu vực (Tavily + AI lọc) và gộp với danh sách trong **n8n/cau-hinh/doi-thu.txt**\n2. Tìm trên web (Tavily) tin mới về từng tiệm + xu hướng bánh\n3. So với kho bánh Mitu → báo cáo + 5 ý tưởng bài đăng\n4. Gửi Telegram, lưu file vào **n8n/bao-cao/**, chuyển ý tưởng sang **WF3** để lên lịch đăng\n\nMuốn đổi giờ chạy: bấm vào ô ⏰.",
+        "width": 520,
+        "height": 300,
+        "color": 4
+      },
+      "id": "bc36ba61-908e-481b-8760-a825a37f94a6",
+      "name": "Ghi chú 14b3d8",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                1
+              ],
+              "triggerAtHour": 7
+            }
+          ]
+        }
+      },
+      "id": "93316f5e-264f-4cf3-a14a-e71fbfafb270",
+      "name": "⏰ Thứ Hai 7:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "a7e11b16-f417-492c-9242-2f8c4e2b6329",
+      "name": "▶️ Bấm để chạy thử",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        240,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// ===== Hàm dùng chung (giống nhau ở mọi workflow Mitu) =====\nconst FIRESTORE = \"https://firestore.googleapis.com/v1/projects/mitu-bakery/databases/(default)/documents\";\nfunction fsVal(v) {\n  if (!v) return null;\n  if (\"stringValue\" in v) return v.stringValue;\n  if (\"integerValue\" in v) return Number(v.integerValue);\n  if (\"doubleValue\" in v) return v.doubleValue;\n  if (\"booleanValue\" in v) return v.booleanValue;\n  if (\"arrayValue\" in v) return (v.arrayValue.values || []).map(fsVal);\n  if (\"mapValue\" in v) { const o = {}; for (const [k, x] of Object.entries(v.mapValue.fields || {})) o[k] = fsVal(x); return o; }\n  if (\"timestampValue\" in v) return v.timestampValue;\n  return null;\n}\nfunction fsDoc(d) { const o = { id: d.name.split(\"/\").pop() }; for (const [k, x] of Object.entries(d.fields || {})) o[k] = fsVal(x); return o; }\nasync function loadShop(helpers) {\n  const get = url => helpers.httpRequest({ url, json: true });\n  const [cakesRes, todayRes, shopRes] = await Promise.all([\n    get(FIRESTORE + \"/cakes?pageSize=300\"), get(FIRESTORE + \"/settings/today\"), get(FIRESTORE + \"/settings/shop\"),\n  ]);\n  const cakes = (cakesRes.documents || []).map(fsDoc).filter(c => c.name);\n  return { cakes, today: fsDoc(todayRes), shop: fsDoc(shopRes) };\n}\nfunction readConfig(file) {\n  const fsm = require(\"fs\"), p = require(\"path\");\n  const full = p.join($env.MITU_DIR || \"\", \"n8n\", \"cau-hinh\", file);\n  try {\n    return fsm.readFileSync(full, \"utf8\").split(/\\r?\\n/).filter(l => !l.trim().startsWith(\"#\")).join(\"\\n\").trim();\n  } catch (e) { throw new Error(\"Không đọc được file \" + full + \" (mở n8n bằng n8n.bat nhé). \" + e.message); }\n}\n/** doi-thu.txt: dòng \"@khu-vuc: …\", \"@tu-tim: 5\", còn lại là \"Tên | link\" */\nfunction parseDoiThu(text) {\n  const cfg = { khu_vuc: \"Vạn Phúc, Hà Đông, Hà Nội\", tu_tim: 5, thu_cong: [] };\n  for (const raw of String(text || \"\").split(\"\\n\")) {\n    const l = raw.trim();\n    if (!l) continue;\n    const m = l.match(/^@\\s*([^:]+?)\\s*:\\s*(.*)$/);\n    if (m) {\n      const key = norm(m[1]).replace(/[\\s_]/g, \"-\");\n      if (key === \"khu-vuc\" && m[2].trim()) cfg.khu_vuc = m[2].trim();\n      if (key === \"tu-tim\") cfg.tu_tim = Math.max(0, Math.min(8, parseInt(m[2], 10) || 0));\n      continue;\n    }\n    const [ten, link = \"\"] = l.split(\"|\").map(s => s.trim());\n    if (ten) cfg.thu_cong.push({ ten, link: link.replace(/\\s+#.*$/, \"\") });\n  }\n  return cfg;\n}\nconst CATEGORY = { birthday: \"Bánh sinh nhật\", mini: \"Bánh Mini\", fruit: \"Bánh Hoa quả\", square: \"Bánh Vuông\", male: \"Bánh cho Nam\", female: \"Bánh cho Nữ\", boy: \"Bánh cho Bé Trai\", girl: \"Bánh cho Bé Gái\", troll: \"Bánh Troll & Vui nhộn\" };\nconst vnd = n => Number(n || 0).toLocaleString(\"vi-VN\") + \"đ\";\nconst norm = s => String(s || \"\").normalize(\"NFD\").replace(/[̀-ͯ]/g, \"\").replace(/đ/gi, \"d\").toLowerCase().replace(/\\s+/g, \" \").trim();\nconst escHtml = s => String(s ?? \"\").replace(/&/g, \"&amp;\").replace(/</g, \"&lt;\").replace(/>/g, \"&gt;\");\nconst cakeLine = c => `${c.name} | ${CATEGORY[c.category] || c.category || \"\"} | ${vnd(c.price)}${c.bestseller ? \" | bán chạy\" : \"\"}${c.desc ? \" | \" + String(c.desc).slice(0, 90) : \"\"}`;\nfunction geminiText(r) {\n  const parts = (r && r.candidates && r.candidates[0] && r.candidates[0].content && r.candidates[0].content.parts) || [];\n  return parts.filter(p => p.text && !p.thought).map(p => p.text).join(\"\").trim();\n}\nfunction geminiJson(r) {\n  const t = geminiText(r).replace(/^```(?:json)?\\s*/i, \"\").replace(/```\\s*$/, \"\");\n  return JSON.parse(t);\n}\n/** Tìm số tiền trong câu: 350.000đ, 350k, 350 nghìn, 1.2tr … → số VNĐ */\nfunction moneyIn(text) {\n  const out = [];\n  const re = /(\\d{1,3}(?:[.,]\\d{3})+|\\d+(?:[.,]\\d+)?)\\s*(k|nghìn|ngàn|tr|triệu|đ|vnđ|vnd|đồng)(?![a-zà-ỹ])/gi;\n  let m;\n  while ((m = re.exec(String(text || \"\")))) {\n    const unit = m[2].toLowerCase();\n    let n = /[.,]\\d{3}(?!\\d)/.test(m[1]) && !/^(k|nghìn|ngàn|tr|triệu)$/.test(unit)\n      ? Number(m[1].replace(/[.,]/g, \"\")) : Number(m[1].replace(\",\", \".\"));\n    if (/^(k|nghìn|ngàn)$/.test(unit)) n *= 1000;\n    if (/^(tr|triệu)$/.test(unit)) n *= 1000000;\n    if (n >= 1000) out.push(Math.round(n));\n  }\n  return out;\n}\n// Trạng thái lưu ra file (n8n-data/mitu-trang-thai.json) – giữ được cả khi bấm chạy tay\nfunction stateFile() { return require(\"path\").join($env.MITU_DIR || \"\", \"n8n-data\", \"mitu-trang-thai.json\"); }\nfunction readState() { try { return JSON.parse(require(\"fs\").readFileSync(stateFile(), \"utf8\")); } catch (e) { return {}; } }\nfunction writeState(patch) {\n  const s = { ...readState(), ...patch };\n  try { require(\"fs\").mkdirSync(require(\"path\").dirname(stateFile()), { recursive: true }); require(\"fs\").writeFileSync(stateFile(), JSON.stringify(s, null, 2)); } catch (e) { /* bỏ qua */ }\n  return s;\n}\nconst sameDay = (a, b) => { const p = s => String(s || \"\").split(\"/\").map(Number).join(\"/\"); return p(a) === p(b); };\n// ===== Hết phần dùng chung =====\n\nif (!$env.TAVILY_API_KEY) throw new Error(\"Thiếu TAVILY_API_KEY trong .env.local (đăng ký miễn phí ở tavily.com) – xem WORKFLOW_N8N.md.\");\n  const cfg = parseDoiThu(readConfig(\"doi-thu.txt\"));\n  const k = cfg.khu_vuc;\n  const qs = [`tiệm bánh kem ${k}`, `bánh sinh nhật ${k} đặt bánh review`, `tiệm bánh ngọt gần ${k}`];\n  return qs.map(q => ({ json: { cfg, tu_tim: cfg.tu_tim > 0, tavily_body: { query: q, search_depth: \"basic\", max_results: 10, country: \"vietnam\" } } }));\n"
+      },
+      "id": "8ceff61e-e8c8-4255-a430-e22a0259fcc9",
+      "name": "🧭 Đọc cấu hình + từ khoá tìm đối thủ",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c3bba9ec-feb8-443c-8547-0e687e5d4a04",
+              "leftValue": "={{ $json.tu_tim }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "857ed938-2fab-4554-8cb4-2b8371c5c9a1",
+      "name": "Có bật tự tìm?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        720,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.tavily.com/search",
+        "options": {
+          "timeout": 30000,
+          "batching": {
+            "batch": {
+              "batchSize": 1,
+              "batchInterval": 1500
+            }
+          }
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.TAVILY_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.tavily_body) }}"
+      },
+      "id": "fb138e24-58ad-4edc-a6a6-41e843b7c9ff",
+      "name": "🔎 Tìm tiệm bánh quanh khu vực",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        960,
+        -60
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ===== Hàm dùng chung (giống nhau ở mọi workflow Mitu) =====\nconst FIRESTORE = \"https://firestore.googleapis.com/v1/projects/mitu-bakery/databases/(default)/documents\";\nfunction fsVal(v) {\n  if (!v) return null;\n  if (\"stringValue\" in v) return v.stringValue;\n  if (\"integerValue\" in v) return Number(v.integerValue);\n  if (\"doubleValue\" in v) return v.doubleValue;\n  if (\"booleanValue\" in v) return v.booleanValue;\n  if (\"arrayValue\" in v) return (v.arrayValue.values || []).map(fsVal);\n  if (\"mapValue\" in v) { const o = {}; for (const [k, x] of Object.entries(v.mapValue.fields || {})) o[k] = fsVal(x); return o; }\n  if (\"timestampValue\" in v) return v.timestampValue;\n  return null;\n}\nfunction fsDoc(d) { const o = { id: d.name.split(\"/\").pop() }; for (const [k, x] of Object.entries(d.fields || {})) o[k] = fsVal(x); return o; }\nasync function loadShop(helpers) {\n  const get = url => helpers.httpRequest({ url, json: true });\n  const [cakesRes, todayRes, shopRes] = await Promise.all([\n    get(FIRESTORE + \"/cakes?pageSize=300\"), get(FIRESTORE + \"/settings/today\"), get(FIRESTORE + \"/settings/shop\"),\n  ]);\n  const cakes = (cakesRes.documents || []).map(fsDoc).filter(c => c.name);\n  return { cakes, today: fsDoc(todayRes), shop: fsDoc(shopRes) };\n}\nfunction readConfig(file) {\n  const fsm = require(\"fs\"), p = require(\"path\");\n  const full = p.join($env.MITU_DIR || \"\", \"n8n\", \"cau-hinh\", file);\n  try {\n    return fsm.readFileSync(full, \"utf8\").split(/\\r?\\n/).filter(l => !l.trim().startsWith(\"#\")).join(\"\\n\").trim();\n  } catch (e) { throw new Error(\"Không đọc được file \" + full + \" (mở n8n bằng n8n.bat nhé). \" + e.message); }\n}\n/** doi-thu.txt: dòng \"@khu-vuc: …\", \"@tu-tim: 5\", còn lại là \"Tên | link\" */\nfunction parseDoiThu(text) {\n  const cfg = { khu_vuc: \"Vạn Phúc, Hà Đông, Hà Nội\", tu_tim: 5, thu_cong: [] };\n  for (const raw of String(text || \"\").split(\"\\n\")) {\n    const l = raw.trim();\n    if (!l) continue;\n    const m = l.match(/^@\\s*([^:]+?)\\s*:\\s*(.*)$/);\n    if (m) {\n      const key = norm(m[1]).replace(/[\\s_]/g, \"-\");\n      if (key === \"khu-vuc\" && m[2].trim()) cfg.khu_vuc = m[2].trim();\n      if (key === \"tu-tim\") cfg.tu_tim = Math.max(0, Math.min(8, parseInt(m[2], 10) || 0));\n      continue;\n    }\n    const [ten, link = \"\"] = l.split(\"|\").map(s => s.trim());\n    if (ten) cfg.thu_cong.push({ ten, link: link.replace(/\\s+#.*$/, \"\") });\n  }\n  return cfg;\n}\nconst CATEGORY = { birthday: \"Bánh sinh nhật\", mini: \"Bánh Mini\", fruit: \"Bánh Hoa quả\", square: \"Bánh Vuông\", male: \"Bánh cho Nam\", female: \"Bánh cho Nữ\", boy: \"Bánh cho Bé Trai\", girl: \"Bánh cho Bé Gái\", troll: \"Bánh Troll & Vui nhộn\" };\nconst vnd = n => Number(n || 0).toLocaleString(\"vi-VN\") + \"đ\";\nconst norm = s => String(s || \"\").normalize(\"NFD\").replace(/[̀-ͯ]/g, \"\").replace(/đ/gi, \"d\").toLowerCase().replace(/\\s+/g, \" \").trim();\nconst escHtml = s => String(s ?? \"\").replace(/&/g, \"&amp;\").replace(/</g, \"&lt;\").replace(/>/g, \"&gt;\");\nconst cakeLine = c => `${c.name} | ${CATEGORY[c.category] || c.category || \"\"} | ${vnd(c.price)}${c.bestseller ? \" | bán chạy\" : \"\"}${c.desc ? \" | \" + String(c.desc).slice(0, 90) : \"\"}`;\nfunction geminiText(r) {\n  const parts = (r && r.candidates && r.candidates[0] && r.candidates[0].content && r.candidates[0].content.parts) || [];\n  return parts.filter(p => p.text && !p.thought).map(p => p.text).join(\"\").trim();\n}\nfunction geminiJson(r) {\n  const t = geminiText(r).replace(/^```(?:json)?\\s*/i, \"\").replace(/```\\s*$/, \"\");\n  return JSON.parse(t);\n}\n/** Tìm số tiền trong câu: 350.000đ, 350k, 350 nghìn, 1.2tr … → số VNĐ */\nfunction moneyIn(text) {\n  const out = [];\n  const re = /(\\d{1,3}(?:[.,]\\d{3})+|\\d+(?:[.,]\\d+)?)\\s*(k|nghìn|ngàn|tr|triệu|đ|vnđ|vnd|đồng)(?![a-zà-ỹ])/gi;\n  let m;\n  while ((m = re.exec(String(text || \"\")))) {\n    const unit = m[2].toLowerCase();\n    let n = /[.,]\\d{3}(?!\\d)/.test(m[1]) && !/^(k|nghìn|ngàn|tr|triệu)$/.test(unit)\n      ? Number(m[1].replace(/[.,]/g, \"\")) : Number(m[1].replace(\",\", \".\"));\n    if (/^(k|nghìn|ngàn)$/.test(unit)) n *= 1000;\n    if (/^(tr|triệu)$/.test(unit)) n *= 1000000;\n    if (n >= 1000) out.push(Math.round(n));\n  }\n  return out;\n}\n// Trạng thái lưu ra file (n8n-data/mitu-trang-thai.json) – giữ được cả khi bấm chạy tay\nfunction stateFile() { return require(\"path\").join($env.MITU_DIR || \"\", \"n8n-data\", \"mitu-trang-thai.json\"); }\nfunction readState() { try { return JSON.parse(require(\"fs\").readFileSync(stateFile(), \"utf8\")); } catch (e) { return {}; } }\nfunction writeState(patch) {\n  const s = { ...readState(), ...patch };\n  try { require(\"fs\").mkdirSync(require(\"path\").dirname(stateFile()), { recursive: true }); require(\"fs\").writeFileSync(stateFile(), JSON.stringify(s, null, 2)); } catch (e) { /* bỏ qua */ }\n  return s;\n}\nconst sameDay = (a, b) => { const p = s => String(s || \"\").split(\"/\").map(Number).join(\"/\"); return p(a) === p(b); };\n// ===== Hết phần dùng chung =====\n\nconst cfg = $(\"🧭 Đọc cấu hình + từ khoá tìm đối thủ\").first().json.cfg;\n  const seen = new Set();\n  const results = $input.all().flatMap(i => i.json.results || []).filter(r => r.url && !seen.has(r.url) && seen.add(r.url))\n    .map(r => `- ${r.title} | ${r.url} | ${String(r.content || \"\").replace(/\\s+/g, \" \").slice(0, 300)}`);\n  const prompt = `Tiệm bánh Mitu (bánh kem handmade, 173 Vạn Phúc, Hà Đông, Hà Nội) muốn biết đối thủ cạnh tranh trực tiếp quanh khu: ${cfg.khu_vuc}.\nDưới đây là kết quả tìm kiếm trên web. Hãy chọn tối đa ${cfg.tu_tim} tiệm đối thủ.\n\nTiêu chí:\n- Là MỘT tiệm bánh cụ thể có tên riêng (bán bánh kem / bánh sinh nhật / bánh ngọt), ở trong hoặc gần khu vực trên.\n- Lấy được tên tiệm từ bài \"top tiệm bánh…\" cũng được, nhưng bản thân bài tổng hợp, trang review, sàn giao hàng, siêu thị KHÔNG phải đối thủ.\n- Bỏ Tiệm bánh Mitu.\n- Ưu tiên tiệm cùng phân khúc (bánh kem đặt theo mẫu, bánh sinh nhật giá bình dân – trung bình).\n- link: Fanpage, web hoặc Google Maps của chính tiệm nếu CÓ trong kết quả; không có thì để trống, không bịa.\n- Không tìm được tiệm nào phù hợp thì trả danh sách rỗng.\n\nKết quả tìm kiếm:\n${results.join(\"\\n\") || \"(không có kết quả)\"}`;\n  const STR = { type: \"STRING\" };\n  return [{ json: { gemini_body: {\n    contents: [{ role: \"user\", parts: [{ text: prompt }] }],\n    generationConfig: { temperature: 0.2, responseMimeType: \"application/json\", thinkingConfig: { thinkingLevel: \"low\" },\n      responseSchema: { type: \"OBJECT\", properties: { doi_thu: { type: \"ARRAY\", items: { type: \"OBJECT\", properties: { ten: STR, link: STR, ly_do: STR }, required: [\"ten\", \"ly_do\"] } } }, required: [\"doi_thu\"] } },\n  } } }];\n"
+      },
+      "id": "0b7883cd-1b11-44c7-bf85-39f0a5aa4ea5",
+      "name": "🧠 Nhờ AI lọc ra đối thủ",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        -60
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://generativelanguage.googleapis.com/v1beta/models/{{ $json.model || $env.GEMINI_MODEL || 'gemini-3.6-flash' }}:generateContent",
+        "options": {
+          "timeout": 90000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-goog-api-key",
+              "value": "={{ $env.GEMINI_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.gemini_body) }}"
+      },
+      "id": "878e5792-3b92-49c9-8387-2f8b4027ab17",
+      "name": "🤖 AI chọn đối thủ",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1440,
+        -60
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ===== Hàm dùng chung (giống nhau ở mọi workflow Mitu) =====\nconst FIRESTORE = \"https://firestore.googleapis.com/v1/projects/mitu-bakery/databases/(default)/documents\";\nfunction fsVal(v) {\n  if (!v) return null;\n  if (\"stringValue\" in v) return v.stringValue;\n  if (\"integerValue\" in v) return Number(v.integerValue);\n  if (\"doubleValue\" in v) return v.doubleValue;\n  if (\"booleanValue\" in v) return v.booleanValue;\n  if (\"arrayValue\" in v) return (v.arrayValue.values || []).map(fsVal);\n  if (\"mapValue\" in v) { const o = {}; for (const [k, x] of Object.entries(v.mapValue.fields || {})) o[k] = fsVal(x); return o; }\n  if (\"timestampValue\" in v) return v.timestampValue;\n  return null;\n}\nfunction fsDoc(d) { const o = { id: d.name.split(\"/\").pop() }; for (const [k, x] of Object.entries(d.fields || {})) o[k] = fsVal(x); return o; }\nasync function loadShop(helpers) {\n  const get = url => helpers.httpRequest({ url, json: true });\n  const [cakesRes, todayRes, shopRes] = await Promise.all([\n    get(FIRESTORE + \"/cakes?pageSize=300\"), get(FIRESTORE + \"/settings/today\"), get(FIRESTORE + \"/settings/shop\"),\n  ]);\n  const cakes = (cakesRes.documents || []).map(fsDoc).filter(c => c.name);\n  return { cakes, today: fsDoc(todayRes), shop: fsDoc(shopRes) };\n}\nfunction readConfig(file) {\n  const fsm = require(\"fs\"), p = require(\"path\");\n  const full = p.join($env.MITU_DIR || \"\", \"n8n\", \"cau-hinh\", file);\n  try {\n    return fsm.readFileSync(full, \"utf8\").split(/\\r?\\n/).filter(l => !l.trim().startsWith(\"#\")).join(\"\\n\").trim();\n  } catch (e) { throw new Error(\"Không đọc được file \" + full + \" (mở n8n bằng n8n.bat nhé). \" + e.message); }\n}\n/** doi-thu.txt: dòng \"@khu-vuc: …\", \"@tu-tim: 5\", còn lại là \"Tên | link\" */\nfunction parseDoiThu(text) {\n  const cfg = { khu_vuc: \"Vạn Phúc, Hà Đông, Hà Nội\", tu_tim: 5, thu_cong: [] };\n  for (const raw of String(text || \"\").split(\"\\n\")) {\n    const l = raw.trim();\n    if (!l) continue;\n    const m = l.match(/^@\\s*([^:]+?)\\s*:\\s*(.*)$/);\n    if (m) {\n      const key = norm(m[1]).replace(/[\\s_]/g, \"-\");\n      if (key === \"khu-vuc\" && m[2].trim()) cfg.khu_vuc = m[2].trim();\n      if (key === \"tu-tim\") cfg.tu_tim = Math.max(0, Math.min(8, parseInt(m[2], 10) || 0));\n      continue;\n    }\n    const [ten, link = \"\"] = l.split(\"|\").map(s => s.trim());\n    if (ten) cfg.thu_cong.push({ ten, link: link.replace(/\\s+#.*$/, \"\") });\n  }\n  return cfg;\n}\nconst CATEGORY = { birthday: \"Bánh sinh nhật\", mini: \"Bánh Mini\", fruit: \"Bánh Hoa quả\", square: \"Bánh Vuông\", male: \"Bánh cho Nam\", female: \"Bánh cho Nữ\", boy: \"Bánh cho Bé Trai\", girl: \"Bánh cho Bé Gái\", troll: \"Bánh Troll & Vui nhộn\" };\nconst vnd = n => Number(n || 0).toLocaleString(\"vi-VN\") + \"đ\";\nconst norm = s => String(s || \"\").normalize(\"NFD\").replace(/[̀-ͯ]/g, \"\").replace(/đ/gi, \"d\").toLowerCase().replace(/\\s+/g, \" \").trim();\nconst escHtml = s => String(s ?? \"\").replace(/&/g, \"&amp;\").replace(/</g, \"&lt;\").replace(/>/g, \"&gt;\");\nconst cakeLine = c => `${c.name} | ${CATEGORY[c.category] || c.category || \"\"} | ${vnd(c.price)}${c.bestseller ? \" | bán chạy\" : \"\"}${c.desc ? \" | \" + String(c.desc).slice(0, 90) : \"\"}`;\nfunction geminiText(r) {\n  const parts = (r && r.candidates && r.candidates[0] && r.candidates[0].content && r.candidates[0].content.parts) || [];\n  return parts.filter(p => p.text && !p.thought).map(p => p.text).join(\"\").trim();\n}\nfunction geminiJson(r) {\n  const t = geminiText(r).replace(/^```(?:json)?\\s*/i, \"\").replace(/```\\s*$/, \"\");\n  return JSON.parse(t);\n}\n/** Tìm số tiền trong câu: 350.000đ, 350k, 350 nghìn, 1.2tr … → số VNĐ */\nfunction moneyIn(text) {\n  const out = [];\n  const re = /(\\d{1,3}(?:[.,]\\d{3})+|\\d+(?:[.,]\\d+)?)\\s*(k|nghìn|ngàn|tr|triệu|đ|vnđ|vnd|đồng)(?![a-zà-ỹ])/gi;\n  let m;\n  while ((m = re.exec(String(text || \"\")))) {\n    const unit = m[2].toLowerCase();\n    let n = /[.,]\\d{3}(?!\\d)/.test(m[1]) && !/^(k|nghìn|ngàn|tr|triệu)$/.test(unit)\n      ? Number(m[1].replace(/[.,]/g, \"\")) : Number(m[1].replace(\",\", \".\"));\n    if (/^(k|nghìn|ngàn)$/.test(unit)) n *= 1000;\n    if (/^(tr|triệu)$/.test(unit)) n *= 1000000;\n    if (n >= 1000) out.push(Math.round(n));\n  }\n  return out;\n}\n// Trạng thái lưu ra file (n8n-data/mitu-trang-thai.json) – giữ được cả khi bấm chạy tay\nfunction stateFile() { return require(\"path\").join($env.MITU_DIR || \"\", \"n8n-data\", \"mitu-trang-thai.json\"); }\nfunction readState() { try { return JSON.parse(require(\"fs\").readFileSync(stateFile(), \"utf8\")); } catch (e) { return {}; } }\nfunction writeState(patch) {\n  const s = { ...readState(), ...patch };\n  try { require(\"fs\").mkdirSync(require(\"path\").dirname(stateFile()), { recursive: true }); require(\"fs\").writeFileSync(stateFile(), JSON.stringify(s, null, 2)); } catch (e) { /* bỏ qua */ }\n  return s;\n}\nconst sameDay = (a, b) => { const p = s => String(s || \"\").split(\"/\").map(Number).join(\"/\"); return p(a) === p(b); };\n// ===== Hết phần dùng chung =====\n\nconst cfg = $(\"🧭 Đọc cấu hình + từ khoá tìm đối thủ\").first().json.cfg;\n  // Đối thủ do AI tự tìm (nếu bật và chạy được)\n  let auto = [];\n  try { auto = (geminiJson($(\"🤖 AI chọn đối thủ\").first().json).doi_thu || []); } catch (e) { auto = []; }\n  const manualNames = new Set(cfg.thu_cong.map(r => norm(r.ten)));\n  auto = auto.filter(r => r.ten && !norm(r.ten).includes(\"mitu\") && !manualNames.has(norm(r.ten))).slice(0, cfg.tu_tim)\n    .map(r => ({ ten: String(r.ten).trim(), link: String(r.link || \"\").trim(), ly_do: r.ly_do || \"\", nguon: \"tự tìm\" }));\n  const seen = new Set();\n  const rivals = [...cfg.thu_cong.map(r => ({ ...r, nguon: \"bạn ghi\" })), ...auto]\n    .filter(r => { const k = norm(r.ten); if (seen.has(k)) return false; seen.add(k); return true; }).slice(0, 10);\n  if (!rivals.length) throw new Error(\"Chưa có đối thủ: AI không tìm được tiệm nào và n8n/cau-hinh/doi-thu.txt cũng trống. Thêm vài dòng 'Tên | link' hoặc sửa dòng @khu-vuc rồi chạy lại.\");\n  // Lưu danh sách tự tìm để marketing xem / chép sang doi-thu.txt\n  if (auto.length) {\n    try {\n      const fsm = require(\"fs\"), p = require(\"path\");\n      const txt = [`# Đối thủ WF2 tự tìm ngày ${$now.setZone(\"Asia/Ho_Chi_Minh\").toFormat(\"dd/MM/yyyy\")} (khu: ${cfg.khu_vuc})`,\n        \"# File này bị ghi đè mỗi tuần. Tiệm nào muốn theo dõi lâu dài thì chép dòng đó sang doi-thu.txt.\", \"\",\n        ...auto.map(r => `${r.ten} | ${r.link}    # ${r.ly_do}`)].join(\"\\n\") + \"\\n\";\n      fsm.writeFileSync(p.join($env.MITU_DIR || \"\", \"n8n\", \"cau-hinh\", \"doi-thu-tu-tim.txt\"), txt, \"utf8\");\n    } catch (e) { /* bỏ qua */ }\n  }\n  const ds = rivals.map(r => `${r.ten} (${r.nguon})`);\n  const asks = rivals.map(r => ({ loai: \"doi_thu\", ten: r.ten, link: r.link, ds_doi_thu: ds, q: `\"${r.ten}\" bánh kem mẫu mới giá khuyến mãi review` }));\n  asks.push({ loai: \"xu_huong\", ten: \"Xu hướng thị trường\", link: \"\", ds_doi_thu: ds, q: \"xu hướng bánh kem bánh sinh nhật Hà Nội mới nhất\" });\n  // Tavily: công cụ tìm kiếm cho AI, gói free ~1.000 lượt/tháng\n  return asks.map(a => ({ json: { ...a, tavily_body: { query: a.q, search_depth: \"basic\", max_results: 6, include_answer: \"basic\", time_range: \"month\", country: \"vietnam\" } } }));\n"
+      },
+      "id": "4962b2fd-b6c5-441f-9944-c54b6b3d1ded",
+      "name": "📂 Gộp đối thủ + soạn từ khoá",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1440,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.tavily.com/search",
+        "options": {
+          "timeout": 30000,
+          "batching": {
+            "batch": {
+              "batchSize": 1,
+              "batchInterval": 1500
+            }
+          }
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.TAVILY_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.tavily_body) }}"
+      },
+      "id": "bedc2973-7197-4551-9802-5f38329a1ecd",
+      "name": "🔎 Tìm trên web (Tavily)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1680,
+        100
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ===== Hàm dùng chung (giống nhau ở mọi workflow Mitu) =====\nconst FIRESTORE = \"https://firestore.googleapis.com/v1/projects/mitu-bakery/databases/(default)/documents\";\nfunction fsVal(v) {\n  if (!v) return null;\n  if (\"stringValue\" in v) return v.stringValue;\n  if (\"integerValue\" in v) return Number(v.integerValue);\n  if (\"doubleValue\" in v) return v.doubleValue;\n  if (\"booleanValue\" in v) return v.booleanValue;\n  if (\"arrayValue\" in v) return (v.arrayValue.values || []).map(fsVal);\n  if (\"mapValue\" in v) { const o = {}; for (const [k, x] of Object.entries(v.mapValue.fields || {})) o[k] = fsVal(x); return o; }\n  if (\"timestampValue\" in v) return v.timestampValue;\n  return null;\n}\nfunction fsDoc(d) { const o = { id: d.name.split(\"/\").pop() }; for (const [k, x] of Object.entries(d.fields || {})) o[k] = fsVal(x); return o; }\nasync function loadShop(helpers) {\n  const get = url => helpers.httpRequest({ url, json: true });\n  const [cakesRes, todayRes, shopRes] = await Promise.all([\n    get(FIRESTORE + \"/cakes?pageSize=300\"), get(FIRESTORE + \"/settings/today\"), get(FIRESTORE + \"/settings/shop\"),\n  ]);\n  const cakes = (cakesRes.documents || []).map(fsDoc).filter(c => c.name);\n  return { cakes, today: fsDoc(todayRes), shop: fsDoc(shopRes) };\n}\nfunction readConfig(file) {\n  const fsm = require(\"fs\"), p = require(\"path\");\n  const full = p.join($env.MITU_DIR || \"\", \"n8n\", \"cau-hinh\", file);\n  try {\n    return fsm.readFileSync(full, \"utf8\").split(/\\r?\\n/).filter(l => !l.trim().startsWith(\"#\")).join(\"\\n\").trim();\n  } catch (e) { throw new Error(\"Không đọc được file \" + full + \" (mở n8n bằng n8n.bat nhé). \" + e.message); }\n}\n/** doi-thu.txt: dòng \"@khu-vuc: …\", \"@tu-tim: 5\", còn lại là \"Tên | link\" */\nfunction parseDoiThu(text) {\n  const cfg = { khu_vuc: \"Vạn Phúc, Hà Đông, Hà Nội\", tu_tim: 5, thu_cong: [] };\n  for (const raw of String(text || \"\").split(\"\\n\")) {\n    const l = raw.trim();\n    if (!l) continue;\n    const m = l.match(/^@\\s*([^:]+?)\\s*:\\s*(.*)$/);\n    if (m) {\n      const key = norm(m[1]).replace(/[\\s_]/g, \"-\");\n      if (key === \"khu-vuc\" && m[2].trim()) cfg.khu_vuc = m[2].trim();\n      if (key === \"tu-tim\") cfg.tu_tim = Math.max(0, Math.min(8, parseInt(m[2], 10) || 0));\n      continue;\n    }\n    const [ten, link = \"\"] = l.split(\"|\").map(s => s.trim());\n    if (ten) cfg.thu_cong.push({ ten, link: link.replace(/\\s+#.*$/, \"\") });\n  }\n  return cfg;\n}\nconst CATEGORY = { birthday: \"Bánh sinh nhật\", mini: \"Bánh Mini\", fruit: \"Bánh Hoa quả\", square: \"Bánh Vuông\", male: \"Bánh cho Nam\", female: \"Bánh cho Nữ\", boy: \"Bánh cho Bé Trai\", girl: \"Bánh cho Bé Gái\", troll: \"Bánh Troll & Vui nhộn\" };\nconst vnd = n => Number(n || 0).toLocaleString(\"vi-VN\") + \"đ\";\nconst norm = s => String(s || \"\").normalize(\"NFD\").replace(/[̀-ͯ]/g, \"\").replace(/đ/gi, \"d\").toLowerCase().replace(/\\s+/g, \" \").trim();\nconst escHtml = s => String(s ?? \"\").replace(/&/g, \"&amp;\").replace(/</g, \"&lt;\").replace(/>/g, \"&gt;\");\nconst cakeLine = c => `${c.name} | ${CATEGORY[c.category] || c.category || \"\"} | ${vnd(c.price)}${c.bestseller ? \" | bán chạy\" : \"\"}${c.desc ? \" | \" + String(c.desc).slice(0, 90) : \"\"}`;\nfunction geminiText(r) {\n  const parts = (r && r.candidates && r.candidates[0] && r.candidates[0].content && r.candidates[0].content.parts) || [];\n  return parts.filter(p => p.text && !p.thought).map(p => p.text).join(\"\").trim();\n}\nfunction geminiJson(r) {\n  const t = geminiText(r).replace(/^```(?:json)?\\s*/i, \"\").replace(/```\\s*$/, \"\");\n  return JSON.parse(t);\n}\n/** Tìm số tiền trong câu: 350.000đ, 350k, 350 nghìn, 1.2tr … → số VNĐ */\nfunction moneyIn(text) {\n  const out = [];\n  const re = /(\\d{1,3}(?:[.,]\\d{3})+|\\d+(?:[.,]\\d+)?)\\s*(k|nghìn|ngàn|tr|triệu|đ|vnđ|vnd|đồng)(?![a-zà-ỹ])/gi;\n  let m;\n  while ((m = re.exec(String(text || \"\")))) {\n    const unit = m[2].toLowerCase();\n    let n = /[.,]\\d{3}(?!\\d)/.test(m[1]) && !/^(k|nghìn|ngàn|tr|triệu)$/.test(unit)\n      ? Number(m[1].replace(/[.,]/g, \"\")) : Number(m[1].replace(\",\", \".\"));\n    if (/^(k|nghìn|ngàn)$/.test(unit)) n *= 1000;\n    if (/^(tr|triệu)$/.test(unit)) n *= 1000000;\n    if (n >= 1000) out.push(Math.round(n));\n  }\n  return out;\n}\n// Trạng thái lưu ra file (n8n-data/mitu-trang-thai.json) – giữ được cả khi bấm chạy tay\nfunction stateFile() { return require(\"path\").join($env.MITU_DIR || \"\", \"n8n-data\", \"mitu-trang-thai.json\"); }\nfunction readState() { try { return JSON.parse(require(\"fs\").readFileSync(stateFile(), \"utf8\")); } catch (e) { return {}; } }\nfunction writeState(patch) {\n  const s = { ...readState(), ...patch };\n  try { require(\"fs\").mkdirSync(require(\"path\").dirname(stateFile()), { recursive: true }); require(\"fs\").writeFileSync(stateFile(), JSON.stringify(s, null, 2)); } catch (e) { /* bỏ qua */ }\n  return s;\n}\nconst sameDay = (a, b) => { const p = s => String(s || \"\").split(\"/\").map(Number).join(\"/\"); return p(a) === p(b); };\n// ===== Hết phần dùng chung =====\n\nconst asks = $(\"📂 Gộp đối thủ + soạn từ khoá\").all().map(i => i.json);\n  const notes = $input.all().map((it, i) => {\n    const r = it.json, a = asks[i] || {};\n    const results = (r.results || []).slice(0, 6).map(x => ({ title: x.title, uri: x.url, content: String(x.content || \"\").replace(/\\s+/g, \" \").slice(0, 500) }));\n    const ghi_chu = r.error ? \"Không tra được (\" + (r.error.message || \"lỗi Tavily\") + \").\"\n      : [r.answer ? \"Tóm tắt nhanh: \" + r.answer : \"\", ...results.map(x => `- [${x.title}] ${x.content}`)].filter(Boolean).join(\"\\n\") || \"Không tìm thấy.\";\n    return { loai: a.loai, ten: a.ten, link: a.link, ghi_chu, nguon: results.map(({ title, uri }) => ({ title, uri })) };\n  });\n  return [{ json: { notes } }];\n"
+      },
+      "id": "8dedce66-ba54-44c9-a9ce-933e4401be65",
+      "name": "📚 Gom kết quả tìm kiếm",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1920,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// ===== Hàm dùng chung (giống nhau ở mọi workflow Mitu) =====\nconst FIRESTORE = \"https://firestore.googleapis.com/v1/projects/mitu-bakery/databases/(default)/documents\";\nfunction fsVal(v) {\n  if (!v) return null;\n  if (\"stringValue\" in v) return v.stringValue;\n  if (\"integerValue\" in v) return Number(v.integerValue);\n  if (\"doubleValue\" in v) return v.doubleValue;\n  if (\"booleanValue\" in v) return v.booleanValue;\n  if (\"arrayValue\" in v) return (v.arrayValue.values || []).map(fsVal);\n  if (\"mapValue\" in v) { const o = {}; for (const [k, x] of Object.entries(v.mapValue.fields || {})) o[k] = fsVal(x); return o; }\n  if (\"timestampValue\" in v) return v.timestampValue;\n  return null;\n}\nfunction fsDoc(d) { const o = { id: d.name.split(\"/\").pop() }; for (const [k, x] of Object.entries(d.fields || {})) o[k] = fsVal(x); return o; }\nasync function loadShop(helpers) {\n  const get = url => helpers.httpRequest({ url, json: true });\n  const [cakesRes, todayRes, shopRes] = await Promise.all([\n    get(FIRESTORE + \"/cakes?pageSize=300\"), get(FIRESTORE + \"/settings/today\"), get(FIRESTORE + \"/settings/shop\"),\n  ]);\n  const cakes = (cakesRes.documents || []).map(fsDoc).filter(c => c.name);\n  return { cakes, today: fsDoc(todayRes), shop: fsDoc(shopRes) };\n}\nfunction readConfig(file) {\n  const fsm = require(\"fs\"), p = require(\"path\");\n  const full = p.join($env.MITU_DIR || \"\", \"n8n\", \"cau-hinh\", file);\n  try {\n    return fsm.readFileSync(full, \"utf8\").split(/\\r?\\n/).filter(l => !l.trim().startsWith(\"#\")).join(\"\\n\").trim();\n  } catch (e) { throw new Error(\"Không đọc được file \" + full + \" (mở n8n bằng n8n.bat nhé). \" + e.message); }\n}\n/** doi-thu.txt: dòng \"@khu-vuc: …\", \"@tu-tim: 5\", còn lại là \"Tên | link\" */\nfunction parseDoiThu(text) {\n  const cfg = { khu_vuc: \"Vạn Phúc, Hà Đông, Hà Nội\", tu_tim: 5, thu_cong: [] };\n  for (const raw of String(text || \"\").split(\"\\n\")) {\n    const l = raw.trim();\n    if (!l) continue;\n    const m = l.match(/^@\\s*([^:]+?)\\s*:\\s*(.*)$/);\n    if (m) {\n      const key = norm(m[1]).replace(/[\\s_]/g, \"-\");\n      if (key === \"khu-vuc\" && m[2].trim()) cfg.khu_vuc = m[2].trim();\n      if (key === \"tu-tim\") cfg.tu_tim = Math.max(0, Math.min(8, parseInt(m[2], 10) || 0));\n      continue;\n    }\n    const [ten, link = \"\"] = l.split(\"|\").map(s => s.trim());\n    if (ten) cfg.thu_cong.push({ ten, link: link.replace(/\\s+#.*$/, \"\") });\n  }\n  return cfg;\n}\nconst CATEGORY = { birthday: \"Bánh sinh nhật\", mini: \"Bánh Mini\", fruit: \"Bánh Hoa quả\", square: \"Bánh Vuông\", male: \"Bánh cho Nam\", female: \"Bánh cho Nữ\", boy: \"Bánh cho Bé Trai\", girl: \"Bánh cho Bé Gái\", troll: \"Bánh Troll & Vui nhộn\" };\nconst vnd = n => Number(n || 0).toLocaleString(\"vi-VN\") + \"đ\";\nconst norm = s => String(s || \"\").normalize(\"NFD\").replace(/[̀-ͯ]/g, \"\").replace(/đ/gi, \"d\").toLowerCase().replace(/\\s+/g, \" \").trim();\nconst escHtml = s => String(s ?? \"\").replace(/&/g, \"&amp;\").replace(/</g, \"&lt;\").replace(/>/g, \"&gt;\");\nconst cakeLine = c => `${c.name} | ${CATEGORY[c.category] || c.category || \"\"} | ${vnd(c.price)}${c.bestseller ? \" | bán chạy\" : \"\"}${c.desc ? \" | \" + String(c.desc).slice(0, 90) : \"\"}`;\nfunction geminiText(r) {\n  const parts = (r && r.candidates && r.candidates[0] && r.candidates[0].content && r.candidates[0].content.parts) || [];\n  return parts.filter(p => p.text && !p.thought).map(p => p.text).join(\"\").trim();\n}\nfunction geminiJson(r) {\n  const t = geminiText(r).replace(/^```(?:json)?\\s*/i, \"\").replace(/```\\s*$/, \"\");\n  return JSON.parse(t);\n}\n/** Tìm số tiền trong câu: 350.000đ, 350k, 350 nghìn, 1.2tr … → số VNĐ */\nfunction moneyIn(text) {\n  const out = [];\n  const re = /(\\d{1,3}(?:[.,]\\d{3})+|\\d+(?:[.,]\\d+)?)\\s*(k|nghìn|ngàn|tr|triệu|đ|vnđ|vnd|đồng)(?![a-zà-ỹ])/gi;\n  let m;\n  while ((m = re.exec(String(text || \"\")))) {\n    const unit = m[2].toLowerCase();\n    let n = /[.,]\\d{3}(?!\\d)/.test(m[1]) && !/^(k|nghìn|ngàn|tr|triệu)$/.test(unit)\n      ? Number(m[1].replace(/[.,]/g, \"\")) : Number(m[1].replace(\",\", \".\"));\n    if (/^(k|nghìn|ngàn)$/.test(unit)) n *= 1000;\n    if (/^(tr|triệu)$/.test(unit)) n *= 1000000;\n    if (n >= 1000) out.push(Math.round(n));\n  }\n  return out;\n}\n// Trạng thái lưu ra file (n8n-data/mitu-trang-thai.json) – giữ được cả khi bấm chạy tay\nfunction stateFile() { return require(\"path\").join($env.MITU_DIR || \"\", \"n8n-data\", \"mitu-trang-thai.json\"); }\nfunction readState() { try { return JSON.parse(require(\"fs\").readFileSync(stateFile(), \"utf8\")); } catch (e) { return {}; } }\nfunction writeState(patch) {\n  const s = { ...readState(), ...patch };\n  try { require(\"fs\").mkdirSync(require(\"path\").dirname(stateFile()), { recursive: true }); require(\"fs\").writeFileSync(stateFile(), JSON.stringify(s, null, 2)); } catch (e) { /* bỏ qua */ }\n  return s;\n}\nconst sameDay = (a, b) => { const p = s => String(s || \"\").split(\"/\").map(Number).join(\"/\"); return p(a) === p(b); };\n// ===== Hết phần dùng chung =====\n\nconst shop = await loadShop(this.helpers);\n  const notes = $json.notes;\n  const today = $now.setZone(\"Asia/Ho_Chi_Minh\");\n  // Các dịp cố định trong 21 ngày tới\n  const FIXED = [[\"14/02\", \"Valentine\"], [\"08/03\", \"Quốc tế Phụ nữ 8/3\"], [\"14/03\", \"Valentine Trắng\"], [\"01/06\", \"Quốc tế Thiếu nhi 1/6\"], [\"20/10\", \"Phụ nữ Việt Nam 20/10\"], [\"31/10\", \"Halloween\"], [\"20/11\", \"Nhà giáo Việt Nam 20/11\"], [\"24/12\", \"Giáng sinh\"], [\"01/01\", \"Năm mới\"]];\n  const soon = [];\n  for (let d = 0; d <= 21; d++) {\n    const day = today.plus({ days: d }).toFormat(\"dd/MM\");\n    for (const [k, v] of FIXED) if (k === day) soon.push(`${v} (${today.plus({ days: d }).toFormat(\"dd/MM\")})`);\n  }\n  const catalog = shop.cakes.map(cakeLine).join(\"\\n\");\n  const prompt = `Bạn là trưởng nhóm marketing của Tiệm bánh Mitu (bánh kem handmade, Hà Đông, Hà Nội). Hôm nay ${today.toFormat(\"dd/MM/yyyy\")}.\nDưới đây là kết quả tìm kiếm trên web tuần này về đối thủ, xu hướng và kho bánh của Mitu. Hãy phân tích và đề xuất.\n\n## Kết quả tìm kiếm\n${notes.map(n => `### ${n.ten}${n.link ? \" (\" + n.link + \")\" : \"\"}\\n${n.ghi_chu}`).join(\"\\n\\n\")}\n\n## Kho bánh Mitu (tên | danh mục | giá | ghi chú)\n${catalog}\n\n## Dịp lễ trong 3 tuần tới\n${soon.join(\", \") || \"Không có dịp cố định; tự xét dịp âm lịch nếu có (Trung thu, Tết…).\"}\n\nYêu cầu:\n- Chỉ dựa vào kết quả tìm kiếm; bỏ qua kết quả không nói về đúng tiệm đó; không tìm thấy thì ghi \"Chưa có thông tin\", không bịa.\n- so_sanh_gia: so nhóm bánh tương đương giữa Mitu và đối thủ (nếu có giá).\n- y_tuong_bai_dang: đúng 5 ý tưởng bài Facebook cho tuần tới; mỗi ý tưởng gắn với MỘT bánh có thật trong kho Mitu (chép đúng tên ở cột đầu) và nêu góc nhìn cụ thể (dịp lễ, trend, điểm hơn đối thủ…).\n- viec_nen_lam: đúng 3 việc cụ thể Mitu nên làm tuần này.`;\n  const S = (props, req) => ({ type: \"OBJECT\", properties: props, required: req || Object.keys(props) });\n  const STR = { type: \"STRING\" }, ARR = items => ({ type: \"ARRAY\", items });\n  const schema = S({\n    tom_tat: STR,\n    doi_thu: ARR(S({ ten: STR, diem_noi_bat: STR, khoang_gia: STR, khuyen_mai: STR })),\n    so_sanh_gia: ARR(S({ nhom_banh: STR, mitu: STR, doi_thu: STR, nhan_xet: STR })),\n    xu_huong: ARR(STR),\n    co_hoi: ARR(STR),\n    viec_nen_lam: ARR(STR),\n    y_tuong_bai_dang: ARR(S({ tieu_de: STR, goc_nhin: STR, banh_mitu: STR })),\n  });\n  return [{ json: { notes, gemini_body: {\n    contents: [{ role: \"user\", parts: [{ text: prompt }] }],\n    generationConfig: { temperature: 0.5, responseMimeType: \"application/json\", responseSchema: schema, thinkingConfig: { thinkingLevel: \"low\" } },\n  } } }];\n"
+      },
+      "id": "a4cf7790-341e-49da-b3fa-947c1d5f9509",
+      "name": "🧠 Soạn yêu cầu phân tích",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2160,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://generativelanguage.googleapis.com/v1beta/models/{{ $json.model || $env.GEMINI_MODEL || 'gemini-3.6-flash' }}:generateContent",
+        "options": {
+          "timeout": 90000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-goog-api-key",
+              "value": "={{ $env.GEMINI_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.gemini_body) }}"
+      },
+      "id": "d591dbc9-1143-4df2-ae4d-7a78293838d7",
+      "name": "🧠 AI phân tích & đề xuất",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2400,
+        100
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "jsCode": "// ===== Hàm dùng chung (giống nhau ở mọi workflow Mitu) =====\nconst FIRESTORE = \"https://firestore.googleapis.com/v1/projects/mitu-bakery/databases/(default)/documents\";\nfunction fsVal(v) {\n  if (!v) return null;\n  if (\"stringValue\" in v) return v.stringValue;\n  if (\"integerValue\" in v) return Number(v.integerValue);\n  if (\"doubleValue\" in v) return v.doubleValue;\n  if (\"booleanValue\" in v) return v.booleanValue;\n  if (\"arrayValue\" in v) return (v.arrayValue.values || []).map(fsVal);\n  if (\"mapValue\" in v) { const o = {}; for (const [k, x] of Object.entries(v.mapValue.fields || {})) o[k] = fsVal(x); return o; }\n  if (\"timestampValue\" in v) return v.timestampValue;\n  return null;\n}\nfunction fsDoc(d) { const o = { id: d.name.split(\"/\").pop() }; for (const [k, x] of Object.entries(d.fields || {})) o[k] = fsVal(x); return o; }\nasync function loadShop(helpers) {\n  const get = url => helpers.httpRequest({ url, json: true });\n  const [cakesRes, todayRes, shopRes] = await Promise.all([\n    get(FIRESTORE + \"/cakes?pageSize=300\"), get(FIRESTORE + \"/settings/today\"), get(FIRESTORE + \"/settings/shop\"),\n  ]);\n  const cakes = (cakesRes.documents || []).map(fsDoc).filter(c => c.name);\n  return { cakes, today: fsDoc(todayRes), shop: fsDoc(shopRes) };\n}\nfunction readConfig(file) {\n  const fsm = require(\"fs\"), p = require(\"path\");\n  const full = p.join($env.MITU_DIR || \"\", \"n8n\", \"cau-hinh\", file);\n  try {\n    return fsm.readFileSync(full, \"utf8\").split(/\\r?\\n/).filter(l => !l.trim().startsWith(\"#\")).join(\"\\n\").trim();\n  } catch (e) { throw new Error(\"Không đọc được file \" + full + \" (mở n8n bằng n8n.bat nhé). \" + e.message); }\n}\n/** doi-thu.txt: dòng \"@khu-vuc: …\", \"@tu-tim: 5\", còn lại là \"Tên | link\" */\nfunction parseDoiThu(text) {\n  const cfg = { khu_vuc: \"Vạn Phúc, Hà Đông, Hà Nội\", tu_tim: 5, thu_cong: [] };\n  for (const raw of String(text || \"\").split(\"\\n\")) {\n    const l = raw.trim();\n    if (!l) continue;\n    const m = l.match(/^@\\s*([^:]+?)\\s*:\\s*(.*)$/);\n    if (m) {\n      const key = norm(m[1]).replace(/[\\s_]/g, \"-\");\n      if (key === \"khu-vuc\" && m[2].trim()) cfg.khu_vuc = m[2].trim();\n      if (key === \"tu-tim\") cfg.tu_tim = Math.max(0, Math.min(8, parseInt(m[2], 10) || 0));\n      continue;\n    }\n    const [ten, link = \"\"] = l.split(\"|\").map(s => s.trim());\n    if (ten) cfg.thu_cong.push({ ten, link: link.replace(/\\s+#.*$/, \"\") });\n  }\n  return cfg;\n}\nconst CATEGORY = { birthday: \"Bánh sinh nhật\", mini: \"Bánh Mini\", fruit: \"Bánh Hoa quả\", square: \"Bánh Vuông\", male: \"Bánh cho Nam\", female: \"Bánh cho Nữ\", boy: \"Bánh cho Bé Trai\", girl: \"Bánh cho Bé Gái\", troll: \"Bánh Troll & Vui nhộn\" };\nconst vnd = n => Number(n || 0).toLocaleString(\"vi-VN\") + \"đ\";\nconst norm = s => String(s || \"\").normalize(\"NFD\").replace(/[̀-ͯ]/g, \"\").replace(/đ/gi, \"d\").toLowerCase().replace(/\\s+/g, \" \").trim();\nconst escHtml = s => String(s ?? \"\").replace(/&/g, \"&amp;\").replace(/</g, \"&lt;\").replace(/>/g, \"&gt;\");\nconst cakeLine = c => `${c.name} | ${CATEGORY[c.category] || c.category || \"\"} | ${vnd(c.price)}${c.bestseller ? \" | bán chạy\" : \"\"}${c.desc ? \" | \" + String(c.desc).slice(0, 90) : \"\"}`;\nfunction geminiText(r) {\n  const parts = (r && r.candidates && r.candidates[0] && r.candidates[0].content && r.candidates[0].content.parts) || [];\n  return parts.filter(p => p.text && !p.thought).map(p => p.text).join(\"\").trim();\n}\nfunction geminiJson(r) {\n  const t = geminiText(r).replace(/^```(?:json)?\\s*/i, \"\").replace(/```\\s*$/, \"\");\n  return JSON.parse(t);\n}\n/** Tìm số tiền trong câu: 350.000đ, 350k, 350 nghìn, 1.2tr … → số VNĐ */\nfunction moneyIn(text) {\n  const out = [];\n  const re = /(\\d{1,3}(?:[.,]\\d{3})+|\\d+(?:[.,]\\d+)?)\\s*(k|nghìn|ngàn|tr|triệu|đ|vnđ|vnd|đồng)(?![a-zà-ỹ])/gi;\n  let m;\n  while ((m = re.exec(String(text || \"\")))) {\n    const unit = m[2].toLowerCase();\n    let n = /[.,]\\d{3}(?!\\d)/.test(m[1]) && !/^(k|nghìn|ngàn|tr|triệu)$/.test(unit)\n      ? Number(m[1].replace(/[.,]/g, \"\")) : Number(m[1].replace(\",\", \".\"));\n    if (/^(k|nghìn|ngàn)$/.test(unit)) n *= 1000;\n    if (/^(tr|triệu)$/.test(unit)) n *= 1000000;\n    if (n >= 1000) out.push(Math.round(n));\n  }\n  return out;\n}\n// Trạng thái lưu ra file (n8n-data/mitu-trang-thai.json) – giữ được cả khi bấm chạy tay\nfunction stateFile() { return require(\"path\").join($env.MITU_DIR || \"\", \"n8n-data\", \"mitu-trang-thai.json\"); }\nfunction readState() { try { return JSON.parse(require(\"fs\").readFileSync(stateFile(), \"utf8\")); } catch (e) { return {}; } }\nfunction writeState(patch) {\n  const s = { ...readState(), ...patch };\n  try { require(\"fs\").mkdirSync(require(\"path\").dirname(stateFile()), { recursive: true }); require(\"fs\").writeFileSync(stateFile(), JSON.stringify(s, null, 2)); } catch (e) { /* bỏ qua */ }\n  return s;\n}\nconst sameDay = (a, b) => { const p = s => String(s || \"\").split(\"/\").map(Number).join(\"/\"); return p(a) === p(b); };\n// ===== Hết phần dùng chung =====\n\nconst shop = await loadShop(this.helpers);\n  const notes = $(\"🧠 Soạn yêu cầu phân tích\").first().json.notes;\n  let r;\n  try { r = geminiJson($json); } catch (e) { throw new Error(\"AI trả về không đọc được: \" + e.message); }\n  const byName = new Map(shop.cakes.map(c => [norm(c.name), c]));\n  // Ý tưởng phải gắn với bánh có thật trong kho\n  const ideas = (r.y_tuong_bai_dang || []).map(y => {\n    let cake = byName.get(norm(y.banh_mitu));\n    if (!cake) cake = shop.cakes.find(c => norm(c.name).includes(norm(y.banh_mitu)) || norm(y.banh_mitu).includes(norm(c.name)));\n    return cake ? { ...y, banh_id: cake.id, banh_mitu: cake.name } : null;\n  }).filter(Boolean);\n  const today = $now.setZone(\"Asia/Ho_Chi_Minh\");\n  const L = [];\n  const dsDoiThu = ($(\"📂 Gộp đối thủ + soạn từ khoá\").first().json.ds_doi_thu || []);\n  L.push(`<b>📊 Báo cáo đối thủ tuần ${today.toFormat(\"dd/MM/yyyy\")}</b>`, `🔍 Đã theo dõi: ${escHtml(dsDoiThu.join(\", \"))}`, \"\", escHtml(r.tom_tat || \"\"));\n  if ((r.viec_nen_lam || []).length) L.push(\"\", \"<b>✅ 3 việc nên làm</b>\", ...r.viec_nen_lam.map((v, i) => `${i + 1}. ${escHtml(v)}`));\n  if ((r.doi_thu || []).length) L.push(\"\", \"<b>🏪 Đối thủ</b>\", ...r.doi_thu.map(d => `• <b>${escHtml(d.ten)}</b>: ${escHtml(d.diem_noi_bat)} · Giá: ${escHtml(d.khoang_gia)} · KM: ${escHtml(d.khuyen_mai)}`));\n  if ((r.xu_huong || []).length) L.push(\"\", \"<b>🔥 Xu hướng</b>\", ...r.xu_huong.map(x => \"• \" + escHtml(x)));\n  if (ideas.length) L.push(\"\", `<b>💡 ${ideas.length} ý tưởng bài đăng</b> (đã chuyển sang WF3 để lên lịch)`, ...ideas.map(y => `• ${escHtml(y.tieu_de)} – <i>${escHtml(y.banh_mitu)}</i>`));\n  let telegram_text = L.join(\"\\n\");\n  if (telegram_text.length > 3900) telegram_text = telegram_text.slice(0, 3900) + \"\\n…(xem đủ trong file báo cáo)\";\n\n  // File báo cáo đầy đủ (Markdown) cho team marketing\n  const md = [`# Báo cáo đối thủ – ${today.toFormat(\"dd/MM/yyyy\")}`, \"\", \"Đã theo dõi: \" + dsDoiThu.join(\", \"), \"\", r.tom_tat || \"\",\n    \"\", \"## 3 việc nên làm\", ...(r.viec_nen_lam || []).map((v, i) => `${i + 1}. ${v}`),\n    \"\", \"## Đối thủ\", \"| Tiệm | Điểm nổi bật | Khoảng giá | Khuyến mãi |\", \"|---|---|---|---|\",\n    ...(r.doi_thu || []).map(d => `| ${d.ten} | ${d.diem_noi_bat} | ${d.khoang_gia} | ${d.khuyen_mai} |`),\n    \"\", \"## So sánh giá\", \"| Nhóm bánh | Mitu | Đối thủ | Nhận xét |\", \"|---|---|---|---|\",\n    ...(r.so_sanh_gia || []).map(s => `| ${s.nhom_banh} | ${s.mitu} | ${s.doi_thu} | ${s.nhan_xet} |`),\n    \"\", \"## Xu hướng\", ...(r.xu_huong || []).map(x => \"- \" + x),\n    \"\", \"## Cơ hội cho Mitu\", ...(r.co_hoi || []).map(x => \"- \" + x),\n    \"\", \"## Ý tưởng bài đăng (đã chuyển sang WF3)\", ...ideas.map(y => `- **${y.tieu_de}** – ${y.goc_nhin} _(bánh: ${y.banh_mitu})_`),\n    \"\", \"## Ghi chú nghiên cứu gốc\", ...notes.map(n => `### ${n.ten}\\n${n.ghi_chu}\\n${(n.nguon || []).map(s => `- [${s.title}](${s.uri})`).join(\"\\n\")}`),\n  ].join(\"\\n\");\n  let file = \"\";\n  try {\n    const fsm = require(\"fs\"), p = require(\"path\");\n    const dir = p.join($env.MITU_DIR || \"\", \"n8n\", \"bao-cao\");\n    fsm.mkdirSync(dir, { recursive: true });\n    file = p.join(dir, `doi-thu-${today.toFormat(\"yyyy-MM-dd\")}.md`);\n    fsm.writeFileSync(file, md, \"utf8\");\n  } catch (e) { file = \"(không lưu được file: \" + e.message + \")\"; }\n  return [{ json: { telegram_text, file, y_tuong: ideas, bao_cao: r } }];\n"
+      },
+      "id": "570e714f-e59a-4f03-b464-404a52290ae0",
+      "name": "✍️ Soạn báo cáo + lưu file",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2640,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.telegram.org/bot{{ $env.TELEGRAM_BOT_TOKEN }}/sendMessage",
+        "options": {
+          "timeout": 20000
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ chat_id: $env.TELEGRAM_CHAT_ID, text: $json.telegram_text, parse_mode: 'HTML', disable_web_page_preview: true }) }}"
+      },
+      "id": "c31b22aa-9376-4363-9f21-c7d390cf0853",
+      "name": "📨 Gửi báo cáo Telegram",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2880,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "MituWf3DangBai01",
+          "mode": "id"
+        },
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      },
+      "id": "21761840-0bbc-4993-9753-6bc7dc405805",
+      "name": "➡️ Chuyển ý tưởng sang WF3",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        2880,
+        200
+      ],
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "connections": {
+    "⏰ Thứ Hai 7:00": {
+      "main": [
+        [
+          {
+            "node": "🧭 Đọc cấu hình + từ khoá tìm đối thủ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "▶️ Bấm để chạy thử": {
+      "main": [
+        [
+          {
+            "node": "🧭 Đọc cấu hình + từ khoá tìm đối thủ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🧭 Đọc cấu hình + từ khoá tìm đối thủ": {
+      "main": [
+        [
+          {
+            "node": "Có bật tự tìm?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Có bật tự tìm?": {
+      "main": [
+        [
+          {
+            "node": "🔎 Tìm tiệm bánh quanh khu vực",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "📂 Gộp đối thủ + soạn từ khoá",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔎 Tìm tiệm bánh quanh khu vực": {
+      "main": [
+        [
+          {
+            "node": "🧠 Nhờ AI lọc ra đối thủ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🧠 Nhờ AI lọc ra đối thủ": {
+      "main": [
+        [
+          {
+            "node": "🤖 AI chọn đối thủ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🤖 AI chọn đối thủ": {
+      "main": [
+        [
+          {
+            "node": "📂 Gộp đối thủ + soạn từ khoá",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📂 Gộp đối thủ + soạn từ khoá": {
+      "main": [
+        [
+          {
+            "node": "🔎 Tìm trên web (Tavily)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔎 Tìm trên web (Tavily)": {
+      "main": [
+        [
+          {
+            "node": "📚 Gom kết quả tìm kiếm",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📚 Gom kết quả tìm kiếm": {
+      "main": [
+        [
+          {
+            "node": "🧠 Soạn yêu cầu phân tích",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🧠 Soạn yêu cầu phân tích": {
+      "main": [
+        [
+          {
+            "node": "🧠 AI phân tích & đề xuất",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🧠 AI phân tích & đề xuất": {
+      "main": [
+        [
+          {
+            "node": "✍️ Soạn báo cáo + lưu file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "✍️ Soạn báo cáo + lưu file": {
+      "main": [
+        [
+          {
+            "node": "📨 Gửi báo cáo Telegram",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "➡️ Chuyển ý tưởng sang WF3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Ho_Chi_Minh",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "pinData": {},
+  "tags": []
+}

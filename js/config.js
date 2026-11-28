@@ -285,6 +285,11 @@ const MITU_CLOUDINARY = {
   uploadPreset: "mitu_upload",
 };
 
+// Khung chat AI trên trang khách (workflow WF1 chạy trên n8n, xem WORKFLOW_N8N.md).
+// Để trống "" thì nút chat không hiện. Ví dụ:
+//   "https://ten-mien-cua-ban.ngrok-free.app/webhook/mitu-chat"
+const MITU_CHAT_URL = "";
+
 // ── Dữ liệu đang dùng (js/db.js nạp từ Firestore rồi phát sự kiện "mitu:data") ──
 // initialized = false: Firestore chưa có dữ liệu → trang khách tạm dùng dữ liệu mẫu,
 // admin sẽ thấy nút "Khởi tạo dữ liệu".
